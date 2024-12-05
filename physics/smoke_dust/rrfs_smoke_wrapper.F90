@@ -932,6 +932,12 @@ contains
        SFCWIND          = sqrt(u10m(i)**2+v10m(i)**2)
        windgustpot(i,1) = SFCWIND
        uspdavg2d(i,1) = SFCWIND
+
+       ! SRB - Adding safeguard for kpbl for first timestep
+       if (ktau==1) then
+          kpbl(i,1) = kpbl_thetav(i,1)
+       endif
+
        if (kpbl(i,1)+1 .ge. kts+1 ) then
           do k=kts+1,kpbl(i,1)+1   ! Use kpbl from MYNN
              WIND = sqrt(us3d(i,k)**2+vs3d(i,k)**2)
