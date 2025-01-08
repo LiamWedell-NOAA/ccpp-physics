@@ -241,6 +241,20 @@
   dimensions = ()
   type = logical
   intent = in
+[do_wetrm_thmp]
+  standard_name = do_aerosol_wet_removal_thompson
+  long_name = flag for wet removal of aerosols in Thompson MP
+  units = flag
+  dimensions = ()
+  type = logical
+  intent = in
+[aero_ind_fdb]
+  standard_name = do_smoke_aerosol_indirect_feedback
+  long_name = flag for wfa ifa emission indirect feedback
+  units = flag
+  dimensions = ()
+  type = logical
+  intent = in
 [nc]
   standard_name = mass_number_concentration_of_cloud_liquid_water_particles_in_air
   long_name = cloud droplet number concentration
@@ -490,6 +504,21 @@
   long_name = rain number concentration
   units = kg-1
   dimensions = (horizontal_loop_extent,vertical_layer_dimension)
+  type = real
+  kind = kind_phys
+  intent = inout
+[ndvel]
+  standard_name = number_of_chemical_species_deposited
+  long_name = number of chemical pbl deposited
+  units = count
+  dimensions = ()
+  type = integer
+  intent = in
+[chem3d]
+  standard_name = chem3d_mynn_pbl_transport
+  long_name = mynn pbl transport of smoke and dust
+  units = various
+  dimensions = (horizontal_loop_extent,vertical_layer_dimension,number_of_chemical_species_vertically_mixed)
   type = real
   kind = kind_phys
   intent = inout
@@ -845,6 +874,21 @@
   long_name = instantaneous 3D flux of liquid water from nonconvective precipitation
   units = kg m-2 s-1
   dimensions = (horizontal_loop_extent,vertical_layer_dimension)
+  type = real
+  kind = kind_phys
+  intent = inout
+[do_wetrm_thmp]
+  standard_name = do_aerosol_wet_removal_thompson
+  long_name = flag for wet removal of aerosols in Thompson MP
+  units = flag
+  dimensions = ()
+  type = logical
+  intent = in
+[wetdpr_flux]
+  standard_name = mp_wet_deposition_smoke_dust
+  long_name = large scale wet deposition of smoke and dust
+  units = kg kg-1
+  dimensions = (horizontal_loop_extent,number_of_chemical_species_vertically_mixed)
   type = real
   kind = kind_phys
   intent = inout

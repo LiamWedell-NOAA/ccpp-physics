@@ -52,8 +52,11 @@ module dep_data_mod
 !  starting standard surface temperature [ K ]
   REAL(kind_phys), PARAMETER :: tss0=288.15
   REAL(kind_phys), PARAMETER :: sigma1 = 1.8
+  REAL(kind_phys), PARAMETER :: mean_diameter2 = 1.e-6
+    REAL(kind_phys), PARAMETER :: sigma2 = 1.8
   REAL(kind_phys), PARAMETER :: mean_diameter1 = 4.e-8
   REAL(kind_phys), PARAMETER :: fact_wfa = 1.e-9*6.0/pirs*exp(4.5*log(sigma1)**2)/mean_diameter1**3
+  REAL(kind_phys), PARAMETER :: fact_ifa = 1.e-9*6.0/pirs*exp(4.5*log(sigma2)**2)/mean_diameter2**3
   REAL(kind_phys), PARAMETER :: sginia=2.00
 !  initial sigma-G for nucleimode                 
   REAL(kind_phys), PARAMETER :: sginin=1.70
