@@ -6,7 +6,7 @@ module module_wetdep_ls
   use rrfs_smoke_config, only : p_smoke, p_dust_1, p_coarse_pm, p_qc, alpha => wetdep_ls_alpha
 
 contains
-subroutine wetdep_ls(dt,var,rain,moist,                                         &
+subroutine wetdep_ls(dt,var,rain,moist,p_phy,                                   &
                      rho,nchem,num_moist,ndvel,dz8w,vvel,                       &
                      wetdpr_smoke, wetdpr_dust, wetdpr_coarsepm,                &
                      ids,ide, jds,jde, kds,kde,                                 &
@@ -20,7 +20,7 @@ subroutine wetdep_ls(dt,var,rain,moist,                                         
                                its,ite, jts,jte, kts,kte
    real(kind_phys), intent(in) :: dt
    real(kind_phys), dimension( ims:ime, kms:kme, jms:jme, num_moist),intent(in) :: moist
-   real(kind_phys), dimension( ims:ime, kms:kme, jms:jme),intent(in) :: rho,dz8w,vvel        
+   real(kind_phys), dimension( ims:ime, kms:kme, jms:jme),intent(in) :: rho,dz8w,vvel,p_phy
    real(kind_phys), dimension( ims:ime, kms:kme, jms:jme,1:nchem),intent(inout) :: var        
    real(kind_phys), dimension( ims:ime, jms:jme ), intent(out) :: &
                                               wetdpr_smoke, wetdpr_dust, wetdpr_coarsepm
@@ -83,11 +83,12 @@ subroutine wetdep_ls(dt,var,rain,moist,                                         
             dvar=alpha*factor/(1+factor)*var(i,k,j,nv)
 ! Accumulate diags
             if (nv .eq. p_smoke ) then
-               wetdpr_smoke(i,j) = wetdpr_smoke(i,j) + dvar * rho(i,k,j) / dt
+               wetdpr_smoke(i,j) = wetdpr_smoke(i,j) +        dvar * (p_phy(i,k,j) - p_phy(i,k+1,j))*100. / ( 9.8 * dt )
+!                wetdpr_smoke(i,j) = wetdpr_smoke(i,j) + dvar * rho(i,k,j) * dz8w(i,k,j) / dt
             elseif (nv .eq. p_dust_1 ) then
-               wetdpr_dust(i,j) = wetdpr_dust(i,j) + dvar * rho(i,k,j) / dt
+               wetdpr_dust(i,j) = wetdpr_dust(i,j) +          dvar * (p_phy(i,k,j) - p_phy(i,k+1,j))*100. / ( 9.8 * dt )
             elseif (nv .eq. p_coarse_pm ) then
-               wetdpr_coarsepm(i,j) = wetdpr_coarsepm(i,j) + dvar * rho(i,k,j) / dt
+               wetdpr_coarsepm(i,j) = wetdpr_coarsepm(i,j) +  dvar * (p_phy(i,k,j) - p_phy(i,k+1,j))*100. / ( 9.8 * dt )
             endif
             var(i,k,j,nv)=max(1.e-16,var(i,k,j,nv)-dvar)
           endif
