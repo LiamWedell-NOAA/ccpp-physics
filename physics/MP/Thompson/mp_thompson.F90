@@ -38,6 +38,7 @@ module mp_thompson
                                   imp_physics_thompson, convert_dry_rho,   &
                                   spechum, qc, qr, qi, qs, qg, ni, nr,     &
                                   is_aerosol_aware,  merra2_aerosol_aware, &
+                                  do_wetrm_thmp, aero_ind_fdb,             &
                                   nc, nwfa2d, nifa2d,                      &
                                   nwfa, nifa, tgrs, prsl, phil, area,      &
                                   aerfld, mpicomm, mpirank, mpiroot,       &
@@ -70,6 +71,7 @@ module mp_thompson
          ! Aerosols
          logical,                   intent(in   ) :: is_aerosol_aware
          logical,                   intent(in   ) :: merra2_aerosol_aware
+         logical,                   intent(in   ) :: do_wetrm_thmp, aero_ind_fdb
          real(kind_phys),           intent(inout) :: nc(:,:)
          real(kind_phys),           intent(inout) :: nwfa(:,:)
          real(kind_phys),           intent(inout) :: nifa(:,:)
@@ -149,6 +151,8 @@ module mp_thompson
          ! Call Thompson init
          call thompson_init(is_aerosol_aware_in=is_aerosol_aware,              &
                             merra2_aerosol_aware_in=merra2_aerosol_aware,      &
+                            do_wetrm_thmp_in=do_wetrm_thmp,                    &
+                            aero_ind_fdb_in=aero_ind_fdb,                      &
                             mpicomm=mpicomm, mpirank=mpirank, mpiroot=mpiroot, &
                             threads=threads, errmsg=errmsg, errflg=errflg)
          if (errflg /= 0) return
@@ -342,6 +346,7 @@ module mp_thompson
       subroutine mp_thompson_run(ncol, nlev, con_g, con_rd,        &
                               con_eps, convert_dry_rho,            &
                               spechum, qc, qr, qi, qs, qg, ni, nr, &
+                              ndvel, chem3d,                       &
                               is_aerosol_aware,                    &
                               merra2_aerosol_aware, nc, nwfa, nifa,&
                               nwfa2d, nifa2d, aero_ind_fdb,        &
@@ -359,6 +364,7 @@ module mp_thompson
                               spp_prt_list, spp_var_list,          &
                               spp_stddev_cutoff,                   &
                               cplchm, pfi_lsan, pfl_lsan,          &
+                              do_wetrm_thmp, wetdpr_flux,          &
                               errmsg, errflg)
 
          implicit none
@@ -371,6 +377,7 @@ module mp_thompson
          real(kind_phys),           intent(in   ) :: con_g
          real(kind_phys),           intent(in   ) :: con_rd
          real(kind_phys),           intent(in   ) :: con_eps
+         integer, optional,         intent(in   ) :: ndvel
          ! Hydrometeors
          logical,                   intent(in   ) :: convert_dry_rho
          real(kind_phys),           intent(inout) :: spechum(:,:)
@@ -384,6 +391,7 @@ module mp_thompson
          ! Aerosols
          logical,                   intent(in)    :: is_aerosol_aware, fullradar_diag 
          logical,                   intent(in)    :: merra2_aerosol_aware
+         logical,                   intent(in)    :: do_wetrm_thmp
          real(kind_phys), optional, intent(inout) :: nc(:,:)
          real(kind_phys), optional, intent(inout) :: nwfa(:,:)
          real(kind_phys), optional, intent(inout) :: nifa(:,:)
@@ -391,6 +399,7 @@ module mp_thompson
          real(kind_phys), optional, intent(in   ) :: nifa2d(:)
          real(kind_phys),           intent(in)    :: aerfld(:,:,:)
          logical,         optional, intent(in   ) :: aero_ind_fdb
+         real(kind_phys), optional, intent(inout) :: wetdpr_flux(:,:)
          ! State variables and timestep information
          real(kind_phys),           intent(inout) :: tgrs(:,:)
          real(kind_phys),           intent(in   ) :: prsl(:,:)
@@ -440,6 +449,7 @@ module mp_thompson
          ! ice and liquid water 3d precipitation fluxes - only allocated if cplchm is .true.
          real(kind=kind_phys), intent(inout), dimension(:,:) :: pfi_lsan
          real(kind=kind_phys), intent(inout), dimension(:,:) :: pfl_lsan
+         real(kind=kind_phys), optional, dimension(:,:,:), intent(inout) :: chem3d
 
          ! Local variables
 
@@ -553,6 +563,15 @@ module mp_thompson
               errflg = 1
               return
             end if
+            if ( do_wetrm_thmp .and. .not. (present(chem3d) .and. &
+                                            present(wetdpr_flux))) then
+               write(errmsg,fmt='(*(a))') 'Logic error in mp_thompson_run:',  &
+                                          ' aerosol-aware microphysics with wet removal ', &
+                                          ' requires the following optional arguments: ',  &
+                                          ' chem3d, wetdpr_flux'
+               errflg = 1
+               return
+            endif
             ! Consistency cheecks - subcycling and inner loop at the same time are not supported
             if (nsteps>1 .and. dt_inner < dtp) then
                write(errmsg,'(*(a))') "Logic error: Subcycling and inner loop cannot be used at the same time"
@@ -752,6 +771,7 @@ module mp_thompson
          if (is_aerosol_aware .or. merra2_aerosol_aware) then
             call mp_gt_driver(qv=qv, qc=qc, qr=qr, qi=qi, qs=qs, qg=qg, ni=ni, nr=nr,        &
                               nc=nc, nwfa=nwfa, nifa=nifa, nwfa2d=nwfa2d, nifa2d=nifa2d,     &
+                              ndvel=ndvel,chem3d=chem3d,wetdpr_flux=wetdpr_flux,             &
                               tt=tgrs, p=prsl, w=w, dz=dz, dt_in=dtstep, dt_inner=dt_inner,  &
                               sedi_semi=sedi_semi, decfl=decfl, lsm=islmsk,                  &
                               rainnc=rain_mp, rainncv=delta_rain_mp,                         &
@@ -794,6 +814,7 @@ module mp_thompson
          else
             call mp_gt_driver(qv=qv, qc=qc, qr=qr, qi=qi, qs=qs, qg=qg, ni=ni, nr=nr,        &
                               tt=tgrs, p=prsl, w=w, dz=dz, dt_in=dtstep, dt_inner=dt_inner,  &
+                              ndvel=ndvel,                                                   &
                               sedi_semi=sedi_semi, decfl=decfl, lsm=islmsk,                  &
                               rainnc=rain_mp, rainncv=delta_rain_mp,                         &
                               snownc=snow_mp, snowncv=delta_snow_mp,                         &

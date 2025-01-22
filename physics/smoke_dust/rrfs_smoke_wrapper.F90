@@ -510,7 +510,7 @@ contains
 
 !>- large-scale wet deposition
     if (wetdep_ls_opt == 1) then
-       call  wetdep_ls(dt,chem,rnav,moist,                       &
+       call  wetdep_ls(dt,chem,rnav,moist,p_phy,                 &
                      rho_phy,num_chem,num_moist,ndvel, dz8w,vvel,&
                      wetdpr_smoke_local, wetdpr_dust_local,      &
                      wetdpr_coarsepm_local,                      &
@@ -933,10 +933,10 @@ contains
        windgustpot(i,1) = SFCWIND
        uspdavg2d(i,1) = SFCWIND
 
-       ! SRB - Adding safeguard for kpbl for first timestep
-       if (ktau==1) then
-          kpbl(i,1) = kpbl_thetav(i,1)
-       endif
+        ! SRB - Adding safeguard for kpbl for first timestep
+        if (ktau==1) then
+           kpbl(i,1) = kpbl_thetav(i,1)
+        endif
 
        if (kpbl(i,1)+1 .ge. kts+1 ) then
           do k=kts+1,kpbl(i,1)+1   ! Use kpbl from MYNN
