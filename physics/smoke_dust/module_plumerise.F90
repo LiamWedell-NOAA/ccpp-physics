@@ -146,8 +146,8 @@ check_pl:  IF (do_plumerise) THEN    ! if the namelist option is set for plumeri
                   flam_frac(i,j)= 0. 
                ELSE IF ( (frp_inst(i,j) .le. frp_wthreshold) .AND. ( uspdavg2d(i,1) .ge. uspd_lim ) .AND. & 
                        ( hpbl2d(i,1) .gt. zpbl_lim) .AND. (wind_eff_opt .eq. 1)) THEN
-                  kp1=2
-                  kp2=MAX(3,NINT(real(kpbl(i,j))/3._kind_phys))
+                  kp1=3
+                  kp2=MAX(4,NINT(real(kpbl(i,j))/3._kind_phys))
                   flam_frac(i,j)=0.85 
                ELSE
                   flam_frac(i,j)=0.9  ! kp1,2 come from the plumerise scheme
@@ -159,7 +159,8 @@ check_pl:  IF (do_plumerise) THEN    ! if the namelist option is set for plumeri
                do k=kp1,kp2-1
                      ebu(i,k,j)=flam_frac(i,j)*ebu_in(i,j)*(z_at_w(i,k+1,j)-z_at_w(i,k,j))/dz_plume
                enddo
-               ebu(i,kts,j)= (1.-flam_frac(i,j))* ebu_in(i,j)
+               ebu(i,kts,j)  = (1.-flam_frac(i,j))*0.47* ebu_in(i,j) !SRB: adding two default layers 2024/08/16
+               ebu(i,kts+1,j)= (1.-flam_frac(i,j))*0.53* ebu_in(i,j) ! dz=18.7, 21.2 first two levels
 
                ! For output diagnostic
                k_min(i,j) = kp1
