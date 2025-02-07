@@ -106,9 +106,9 @@
   dimensions = ()
   type = logical
   intent = in
-[hwp_alpha_in]
-  standard_name = scale_factor_for_HWP_6hourly
-  long_name = scale factor for HWP 6 hourly
+[sc_factor_in]
+  standard_name = scale_factor_for_wildfire_emissions
+  long_name = scale factor for wildfire emissions
   units = 1
   dimensions = ()
   type = real
@@ -613,14 +613,6 @@
   long_name = emission fire RRFS daily
   units = various
   dimensions = (horizontal_loop_extent,5)
-  type = real
-  kind = kind_phys
-  intent = in
-[smokem6_RRFS]
-  standard_name = emission_smoke_6hrly
-  long_name = emission fire RRFS 6hr
-  units = various
-  dimensions = (horizontal_loop_extent,4,5)
   type = real
   kind = kind_phys
   intent = in
