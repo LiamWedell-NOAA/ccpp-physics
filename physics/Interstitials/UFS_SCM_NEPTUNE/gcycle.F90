@@ -37,15 +37,16 @@ contains
     real(kind=kind_phys), intent(in)    :: fhcyc, phour, landfrac(:), lakefrac(:), &
                                            min_seaice, min_lakeice,                &
                                            xlat_d(:), xlon_d(:)
-    real(kind=kind_phys), intent(inout) :: smc(:,:),   &
-                                           slc(:,:),   &
-                                           stc(:,:),   &
+    real(kind=kind_phys), intent(inout), optional ::   &
                                            smois(:,:), &
                                            sh2o(:,:),  &
                                            tslb(:,:),  &
+                                           tref(:)
+    real(kind=kind_phys), intent(inout) :: smc(:,:),   &
+                                           slc(:,:),   &
+                                           stc(:,:),   &
                                            tiice(:,:), &
                                            tg3(:),     &
-                                           tref(:),    &
                                            tsfc(:),    &
                                            tsfco(:),   &
                                            tisfc(:),   &
@@ -106,7 +107,7 @@ contains
     real (kind=kind_io8) :: min_ice(nx*ny)
     integer              :: i_indx(nx*ny), j_indx(nx*ny)
     character(len=6)     :: tile_num_ch
-    real(kind=kind_phys) :: sig1t
+    real(kind=kind_phys) :: sig1t(nx*ny)
     integer              :: npts, nb, ix, jx, ls, ios, ll
     logical              :: exists
 
