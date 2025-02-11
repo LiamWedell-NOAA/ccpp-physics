@@ -135,7 +135,7 @@ SUBROUTINE mynnsfc_wrapper_run(            &
       integer, dimension(:), intent(in) :: vegtype
       real(kind_phys), dimension(:), intent(in) ::          &
      &                    sigmaf,shdmax,z0pert,ztpert
-      real(kind_phys), dimension(:,:), intent(in), optional :: &
+      real(kind_phys), dimension(:,:), intent(in) ::        &
      &                    spp_wts_sfc
 
       real(kind_phys), dimension(:,:),                      &
@@ -168,17 +168,15 @@ SUBROUTINE mynnsfc_wrapper_run(            &
 
 !MYNN-2D
       real(kind_phys), dimension(:), intent(in)    ::       &
-     &        dx, pblh, slmsk, ps
-      real(kind_phys), dimension(:), intent(in),optional :: &
+     &        dx, pblh, slmsk, ps,                          &
      &        qsfc_lnd_ruc, qsfc_ice_ruc
 
       real(kind_phys), dimension(:), intent(inout) ::       &
-     &        hflx, qflx, wspd, qsfc,                       &
+     &        ustm, hflx, qflx, wspd, qsfc,                 &
      &        FLHC, FLQC, U10, V10, TH2, T2, Q2,            &
-     &        rmol, ch
-      real(kind_phys), dimension(:), intent(inout), optional :: &
-     &        ustm, zol, mol, lh, wstar, CHS2, CQS2
-      !LOCAL
+     &        CHS2, CQS2, rmol, zol, mol, ch,               &
+     &        lh, wstar
+     !LOCAL
       real(kind_phys), dimension(im) ::                     &
      &        hfx, znt, psim, psih,                         &
      &        chs, ck, cd, mavail, xland, GZ1OZ0,           &

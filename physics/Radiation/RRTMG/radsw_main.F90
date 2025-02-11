@@ -689,8 +689,7 @@
            isubcsw, iovr, iswmode, iovr_dcorr, iovr_exp, iovr_exprand,  &
            iovr_rand, iovr_maxrand, iovr_max
 
-      integer, dimension(:), intent(in) :: idxday
-      integer, dimension(:), intent(in), optional :: icseed
+      integer, dimension(:), intent(in) :: idxday, icseed
 
       logical, intent(in) :: lprnt, lsswr, inc_minor_gas, top_at_1
 
@@ -726,8 +725,7 @@
 
       real (kind=kind_phys), intent(in) :: cosz(npts), solcon,          &
      &       de_lgth(npts)
-      real (kind=kind_phys), dimension(npts,nlay),intent(in),optional:: &
-             alpha
+      real (kind=kind_phys), dimension(npts,nlay), intent(in) :: alpha
 
 !  ---  outputs:
       real (kind=kind_phys), dimension(:,:), intent(inout) :: hswc

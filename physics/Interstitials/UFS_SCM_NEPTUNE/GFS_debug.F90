@@ -303,16 +303,6 @@
 
       use print_var_chksum, only: print_var
 
-      use machine, only: kind_phys
-
-      use GFS_typedefs, only: GFS_control_type, GFS_statein_type,  &
-                              GFS_stateout_type, GFS_sfcprop_type, &
-                              GFS_coupling_type, GFS_grid_type,    &
-                              GFS_tbd_type, GFS_cldprop_type,      &
-                              GFS_radtend_type, GFS_diag_type
-
-      use CCPP_typedefs, only: GFS_interstitial_type
-
       implicit none
 
       private
@@ -324,70 +314,66 @@
 !> \section arg_table_GFS_diagtoscreen_init Argument Table
 !! \htmlinclude GFS_diagtoscreen_init.html
 !!
-      subroutine GFS_diagtoscreen_init (Model, Statein, Stateout, Sfcprop, Coupling,     &
-                                        Grid, Tbd, Cldprop, Radtend, Diag, Interstitial, &
-                                        errmsg, errflg)
+      subroutine GFS_diagtoscreen_init (Model, Data, Interstitial, errmsg, errflg)
+
+         use GFS_typedefs,  only: GFS_control_type, GFS_data_type
+         use CCPP_typedefs, only: GFS_interstitial_type
 
          implicit none
 
          !--- interface variables
          type(GFS_control_type),      intent(in)  :: Model
-         type(GFS_statein_type),      intent(in)  :: Statein
-         type(GFS_stateout_type),     intent(in)  :: Stateout
-         type(GFS_sfcprop_type),      intent(in)  :: Sfcprop
-         type(GFS_coupling_type),     intent(in)  :: Coupling
-         type(GFS_grid_type),         intent(in)  :: Grid
-         type(GFS_tbd_type),          intent(in)  :: Tbd
-         type(GFS_cldprop_type),      intent(in)  :: Cldprop
-         type(GFS_radtend_type),      intent(in)  :: Radtend
-         type(GFS_diag_type),         intent(in)  :: Diag
+         type(GFS_data_type),         intent(in)  :: Data(:)
          type(GFS_interstitial_type), intent(in)  :: Interstitial(:)
          character(len=*),            intent(out) :: errmsg
          integer,                     intent(out) :: errflg
+
+         !--- local variables
+         integer :: i
 
          ! Initialize CCPP error handling variables
          errmsg = ''
          errflg = 0
 
-         call GFS_diagtoscreen_run (Model, Statein, Stateout, Sfcprop, &
-                                    Coupling, Grid, Tbd, Cldprop,      &
-                                    Radtend, Diag, Interstitial(1),    &
-                                    size(Interstitial), -999, errmsg, errflg)
+         do i=1,size(Data)
+           call GFS_diagtoscreen_run (Model, Data(i)%Statein, Data(i)%Stateout, Data(i)%Sfcprop,    &
+                                      Data(i)%Coupling, Data(i)%Grid, Data(i)%Tbd, Data(i)%Cldprop, &
+                                      Data(i)%Radtend, Data(i)%Intdiag, Interstitial(1),            &
+                                      size(Interstitial), i, errmsg, errflg)
+         end do
 
       end subroutine GFS_diagtoscreen_init
 
 !> \section arg_table_GFS_diagtoscreen_timestep_init Argument Table
 !! \htmlinclude GFS_diagtoscreen_timestep_init.html
 !!
-      subroutine GFS_diagtoscreen_timestep_init (Model, Statein, Stateout, Sfcprop, Coupling,     &
-                                                 Grid, Tbd, Cldprop, Radtend, Diag, Interstitial, &
-                                                 errmsg, errflg)
+      subroutine GFS_diagtoscreen_timestep_init (Model, Data, Interstitial, errmsg, errflg)
+
+         use GFS_typedefs,  only: GFS_control_type, GFS_data_type
+         use CCPP_typedefs, only: GFS_interstitial_type
 
          implicit none
 
          !--- interface variables
          type(GFS_control_type),      intent(in)  :: Model
-         type(GFS_statein_type),      intent(in)  :: Statein
-         type(GFS_stateout_type),     intent(in)  :: Stateout
-         type(GFS_sfcprop_type),      intent(in)  :: Sfcprop
-         type(GFS_coupling_type),     intent(in)  :: Coupling
-         type(GFS_grid_type),         intent(in)  :: Grid
-         type(GFS_tbd_type),          intent(in)  :: Tbd
-         type(GFS_cldprop_type),      intent(in)  :: Cldprop
-         type(GFS_radtend_type),      intent(in)  :: Radtend
-         type(GFS_diag_type),         intent(in)  :: Diag
+         type(GFS_data_type),         intent(in)  :: Data(:)
          type(GFS_interstitial_type), intent(in)  :: Interstitial(:)
          character(len=*),            intent(out) :: errmsg
          integer,                     intent(out) :: errflg
+
+         !--- local variables
+         integer :: i
 
          ! Initialize CCPP error handling variables
          errmsg = ''
          errflg = 0
 
-         call GFS_diagtoscreen_run (Model, Statein, Stateout, Sfcprop, &
-                                    Coupling, Grid, Tbd, Cldprop,      &
-                                    Radtend, Diag, Interstitial(1),    &
-                                    size(Interstitial), -999, errmsg, errflg)
+         do i=1,size(Data)
+           call GFS_diagtoscreen_run (Model, Data(i)%Statein, Data(i)%Stateout, Data(i)%Sfcprop,    &
+                                      Data(i)%Coupling, Data(i)%Grid, Data(i)%Tbd, Data(i)%Cldprop, &
+                                      Data(i)%Radtend, Data(i)%Intdiag, Interstitial(1),            &
+                                      size(Interstitial), i, errmsg, errflg)
+         end do
 
       end subroutine GFS_diagtoscreen_timestep_init
 
@@ -399,11 +385,17 @@
                                        nthreads, blkno, errmsg, errflg)
 
 #ifdef MPI
-         use mpi_f08
+         use mpi
 #endif
 #ifdef _OPENMP
          use omp_lib
 #endif
+         use GFS_typedefs,          only: GFS_control_type, GFS_statein_type,  &
+                                          GFS_stateout_type, GFS_sfcprop_type, &
+                                          GFS_coupling_type, GFS_grid_type,    &
+                                          GFS_tbd_type, GFS_cldprop_type,      &
+                                          GFS_radtend_type, GFS_diag_type
+         use CCPP_typedefs,         only: GFS_interstitial_type
 
          implicit none
 
@@ -426,7 +418,7 @@
 
          !--- local variables
          integer :: impi, iomp, ierr, n, idtend, iprocess, itracer
-         integer :: mpirank, mpisize
+         integer :: mpirank, mpisize, mpicomm
          integer :: omprank, ompsize
 
          ! Initialize CCPP error handling variables
@@ -434,11 +426,13 @@
          errflg = 0
 
 #ifdef MPI
+         mpicomm = Model%communicator
          mpirank = Model%me
          mpisize = Model%ntasks
 #else
          mpirank = 0
          mpisize = 1
+         mpicomm = 0
 #endif
 #ifdef _OPENMP
          omprank = OMP_GET_THREAD_NUM()
@@ -452,7 +446,7 @@
 !$OMP BARRIER
 #endif
 #ifdef MPI
-!         call MPI_BARRIER(Model%communicator,ierr)
+!         call MPI_BARRIER(mpicomm,ierr)
 #endif
 
          do impi=0,mpisize-1
@@ -625,7 +619,7 @@
                      call print_var(mpirank, omprank, blkno, Grid%xlat_d, Grid%xlon_d, 'Tbd%in_nm'           , Tbd%in_nm)
                      call print_var(mpirank, omprank, blkno, Grid%xlat_d, Grid%xlon_d, 'Tbd%ccn_nm'          , Tbd%ccn_nm)
                      call print_var(mpirank, omprank, blkno, Grid%xlat_d, Grid%xlon_d, 'Tbd%aer_nm'          , Tbd%aer_nm)
-                     if (Model%imfdeepcnv == Model%imfdeepcnv_gf) then
+                     if (Model%imfdeepcnv == Model%imfdeepcnv_gf .or. Model%imfdeepcnv == Model%imfdeepcnv_unified) then
                        call print_var(mpirank, omprank, blkno, Grid%xlat_d, Grid%xlon_d, 'Tbd%cactiv'        , Tbd%cactiv)
                        call print_var(mpirank, omprank, blkno, Grid%xlat_d, Grid%xlon_d, 'Tbd%cactiv_m'      , Tbd%cactiv_m)
                        call print_var(mpirank, omprank, blkno, Grid%xlat_d, Grid%xlon_d, 'Tbd%aod_gf'        , Tbd%aod_gf)
@@ -694,6 +688,7 @@
                      call print_var(mpirank, omprank, blkno, Grid%xlat_d, Grid%xlon_d, 'Diag%dlwsfci     ',    Diag%dlwsfci)
                      call print_var(mpirank, omprank, blkno, Grid%xlat_d, Grid%xlon_d, 'Diag%ulwsfci     ',    Diag%ulwsfci)
                      call print_var(mpirank, omprank, blkno, Grid%xlat_d, Grid%xlon_d, 'Diag%dswsfci     ',    Diag%dswsfci)
+                     call print_var(mpirank, omprank, blkno, Grid%xlat_d, Grid%xlon_d, 'Diag%dswsfcci    ',    Diag%dswsfcci)
                      call print_var(mpirank, omprank, blkno, Grid%xlat_d, Grid%xlon_d, 'Diag%nswsfci     ',    Diag%nswsfci)
                      call print_var(mpirank, omprank, blkno, Grid%xlat_d, Grid%xlon_d, 'Diag%uswsfci     ',    Diag%uswsfci)
                      call print_var(mpirank, omprank, blkno, Grid%xlat_d, Grid%xlon_d, 'Diag%dusfci      ',    Diag%dusfci)
@@ -883,6 +878,13 @@
                         call print_var(mpirank, omprank, blkno, Grid%xlat_d, Grid%xlon_d, 'Coupling%v10mi_cpl   ', Coupling%v10mi_cpl    )
                         call print_var(mpirank, omprank, blkno, Grid%xlat_d, Grid%xlon_d, 'Coupling%tsfci_cpl   ', Coupling%tsfci_cpl    )
                         call print_var(mpirank, omprank, blkno, Grid%xlat_d, Grid%xlon_d, 'Coupling%psurfi_cpl  ', Coupling%psurfi_cpl   )
+                        if (Model%use_med_flux) then
+                           call print_var(mpirank, omprank, blkno, Grid%xlat_d, Grid%xlon_d, 'Coupling%dusfcino_cpl ', Coupling%dusfcino_cpl  )
+                           call print_var(mpirank, omprank, blkno, Grid%xlat_d, Grid%xlon_d, 'Coupling%dvsfcino_cpl ', Coupling%dvsfcino_cpl  )
+                           call print_var(mpirank, omprank, blkno, Grid%xlat_d, Grid%xlon_d, 'Coupling%dtsfcino_cpl ', Coupling%dtsfcino_cpl  )
+                           call print_var(mpirank, omprank, blkno, Grid%xlat_d, Grid%xlon_d, 'Coupling%dqsfcino_cpl ', Coupling%dqsfcino_cpl  )
+                           call print_var(mpirank, omprank, blkno, Grid%xlat_d, Grid%xlon_d, 'Coupling%ulwsfcino_cpl', Coupling%ulwsfcino_cpl )
+                        end if
                      end if
                      if (Model%cplchm) then
                         call print_var(mpirank, omprank, blkno, Grid%xlat_d, Grid%xlon_d, 'Coupling%rainc_cpl', Coupling%rainc_cpl)
@@ -950,7 +952,7 @@
 #endif
              end do
 #ifdef MPI
-!             call MPI_BARRIER(Model%communicator,ierr)
+!             call MPI_BARRIER(mpicomm,ierr)
 #endif
          end do
 
@@ -958,7 +960,7 @@
 !$OMP BARRIER
 #endif
 #ifdef MPI
-!         call MPI_BARRIER(Model%communicator,ierr)
+!         call MPI_BARRIER(mpicomm,ierr)
 #endif
 
       end subroutine GFS_diagtoscreen_run
@@ -969,17 +971,6 @@
     module GFS_interstitialtoscreen
 
       use print_var_chksum, only: print_var
-
-      use machine, only: kind_phys
-
-      use GFS_typedefs, only: GFS_control_type, GFS_statein_type,  &
-                              GFS_stateout_type, GFS_sfcprop_type, &
-                              GFS_coupling_type, GFS_grid_type,    &
-                              GFS_tbd_type, GFS_cldprop_type,      &
-                              GFS_radtend_type, GFS_diag_type
-
-      use CCPP_typedefs, only: GFS_interstitial_type
-
 
       implicit none
 
@@ -992,23 +983,16 @@
 !> \section arg_table_GFS_interstitialtoscreen_init Argument Table
 !! \htmlinclude GFS_interstitialtoscreen_init.html
 !!
-      subroutine GFS_interstitialtoscreen_init (Model, Statein, Stateout, Sfcprop, Coupling,     &
-                                                Grid, Tbd, Cldprop, Radtend, Diag, Interstitial, &
-                                                errmsg, errflg)
+      subroutine GFS_interstitialtoscreen_init (Model, Data, Interstitial, errmsg, errflg)
+
+         use GFS_typedefs,  only: GFS_control_type, GFS_data_type
+         use CCPP_typedefs, only: GFS_interstitial_type
 
          implicit none
 
          !--- interface variables
          type(GFS_control_type),      intent(in)  :: Model
-         type(GFS_statein_type),      intent(in)  :: Statein
-         type(GFS_stateout_type),     intent(in)  :: Stateout
-         type(GFS_sfcprop_type),      intent(in)  :: Sfcprop
-         type(GFS_coupling_type),     intent(in)  :: Coupling
-         type(GFS_grid_type),         intent(in)  :: Grid
-         type(GFS_tbd_type),          intent(in)  :: Tbd
-         type(GFS_cldprop_type),      intent(in)  :: Cldprop
-         type(GFS_radtend_type),      intent(in)  :: Radtend
-         type(GFS_diag_type),         intent(in)  :: Diag
+         type(GFS_data_type),         intent(in)  :: Data(:)
          type(GFS_interstitial_type), intent(in)  :: Interstitial(:)
          character(len=*),            intent(out) :: errmsg
          integer,                     intent(out) :: errflg
@@ -1020,9 +1004,11 @@
          errmsg = ''
          errflg = 0
 
+
          do i=1,size(Interstitial)
-           call GFS_interstitialtoscreen_run (Model, Statein, Stateout, Sfcprop, Coupling,        &
-                                              Grid, Tbd, Cldprop, Radtend, Diag, Interstitial(i), &
+           call GFS_interstitialtoscreen_run (Model, Data(1)%Statein, Data(1)%Stateout, Data(1)%Sfcprop,    &
+                                              Data(1)%Coupling, Data(1)%Grid, Data(1)%Tbd, Data(1)%Cldprop, &
+                                              Data(1)%Radtend, Data(1)%Intdiag, Interstitial(i),            &
                                               size(Interstitial), -999, errmsg, errflg)
          end do
 
@@ -1031,23 +1017,16 @@
 !> \section arg_table_GFS_interstitialtoscreen_timestep_init Argument Table
 !! \htmlinclude GFS_interstitialtoscreen_timestep_init.html
 !!
-      subroutine GFS_interstitialtoscreen_timestep_init (Model, Statein, Stateout, Sfcprop, Coupling,     &
-                                                         Grid, Tbd, Cldprop, Radtend, Diag, Interstitial, &
-                                                         errmsg, errflg)
+      subroutine GFS_interstitialtoscreen_timestep_init (Model, Data, Interstitial, errmsg, errflg)
+
+         use GFS_typedefs,  only: GFS_control_type, GFS_data_type
+         use CCPP_typedefs, only: GFS_interstitial_type
 
          implicit none
 
          !--- interface variables
          type(GFS_control_type),      intent(in)  :: Model
-         type(GFS_statein_type),      intent(in)  :: Statein
-         type(GFS_stateout_type),     intent(in)  :: Stateout
-         type(GFS_sfcprop_type),      intent(in)  :: Sfcprop
-         type(GFS_coupling_type),     intent(in)  :: Coupling
-         type(GFS_grid_type),         intent(in)  :: Grid
-         type(GFS_tbd_type),          intent(in)  :: Tbd
-         type(GFS_cldprop_type),      intent(in)  :: Cldprop
-         type(GFS_radtend_type),      intent(in)  :: Radtend
-         type(GFS_diag_type),         intent(in)  :: Diag
+         type(GFS_data_type),         intent(in)  :: Data(:)
          type(GFS_interstitial_type), intent(in)  :: Interstitial(:)
          character(len=*),            intent(out) :: errmsg
          integer,                     intent(out) :: errflg
@@ -1061,8 +1040,9 @@
 
 
          do i=1,size(Interstitial)
-           call GFS_interstitialtoscreen_run (Model, Statein, Stateout, Sfcprop, Coupling,        &
-                                              Grid, Tbd, Cldprop, Radtend, Diag, Interstitial(i), &
+           call GFS_interstitialtoscreen_run (Model, Data(1)%Statein, Data(1)%Stateout, Data(1)%Sfcprop,    &
+                                              Data(1)%Coupling, Data(1)%Grid, Data(1)%Tbd, Data(1)%Cldprop, &
+                                              Data(1)%Radtend, Data(1)%Intdiag, Interstitial(i),            &
                                               size(Interstitial), -999, errmsg, errflg)
          end do
 
@@ -1076,11 +1056,19 @@
                                            nthreads, blkno, errmsg, errflg)
 
 #ifdef MPI
-         use mpi_f08
+         use mpi
 #endif
 #ifdef _OPENMP
          use omp_lib
 #endif
+         use machine,               only: kind_phys
+         use GFS_typedefs,          only: GFS_control_type, GFS_statein_type,  &
+                                          GFS_stateout_type, GFS_sfcprop_type, &
+                                          GFS_coupling_type, GFS_grid_type,    &
+                                          GFS_tbd_type, GFS_cldprop_type,      &
+                                          GFS_radtend_type, GFS_diag_type
+         use CCPP_typedefs,         only: GFS_interstitial_type
+
          implicit none
 
          !--- interface variables
@@ -1102,7 +1090,7 @@
 
          !--- local variables
          integer :: impi, iomp, ierr
-         integer :: mpirank, mpisize
+         integer :: mpirank, mpisize, mpicomm
          integer :: omprank, ompsize
          integer :: istart, iend, kstart, kend
 
@@ -1111,11 +1099,13 @@
          errflg = 0
 
 #ifdef MPI
+         mpicomm = Model%communicator
          mpirank = Model%me
-         call MPI_COMM_SIZE(Model%communicator, mpisize, ierr)
+         call MPI_COMM_SIZE(mpicomm, mpisize, ierr)
 #else
          mpirank = 0
          mpisize = 1
+         mpicomm = 0
 #endif
 #ifdef _OPENMP
          omprank = OMP_GET_THREAD_NUM()
@@ -1129,7 +1119,7 @@
 !$OMP BARRIER
 #endif
 #ifdef MPI
-!         call MPI_BARRIER(Model%communicator,ierr)
+!         call MPI_BARRIER(mpicomm,ierr)
 #endif
 
          do impi=0,mpisize-1
@@ -1304,6 +1294,7 @@
                      call print_var(mpirank, omprank, blkno, Grid%xlat_d, Grid%xlon_d, 'Interstitial%qss_ice             ', Interstitial%qss_ice                 )
                      call print_var(mpirank, omprank, blkno, Grid%xlat_d, Grid%xlon_d, 'Interstitial%qss_land            ', Interstitial%qss_land                )
                      call print_var(mpirank, omprank, blkno, Grid%xlat_d, Grid%xlon_d, 'Interstitial%qss_water           ', Interstitial%qss_water               )
+                     call print_var(mpirank, omprank, blkno, Grid%xlat_d, Grid%xlon_d, 'Interstitial%radar_reset         ', Interstitial%radar_reset             )
                      call print_var(mpirank, omprank, blkno, Grid%xlat_d, Grid%xlon_d, 'Interstitial%raddt               ', Interstitial%raddt                   )
                      call print_var(mpirank, omprank, blkno, Grid%xlat_d, Grid%xlon_d, 'Interstitial%raincd              ', Interstitial%raincd                  )
                      call print_var(mpirank, omprank, blkno, Grid%xlat_d, Grid%xlon_d, 'Interstitial%raincs              ', Interstitial%raincs                  )
@@ -1332,6 +1323,8 @@
                      call print_var(mpirank, omprank, blkno, Grid%xlat_d, Grid%xlon_d, 'Interstitial%sigmafrac           ', Interstitial%sigmafrac               )
                      call print_var(mpirank, omprank, blkno, Grid%xlat_d, Grid%xlon_d, 'Interstitial%sigmatot            ', Interstitial%sigmatot                )
                      call print_var(mpirank, omprank, blkno, Grid%xlat_d, Grid%xlon_d, 'Interstitial%snowc               ', Interstitial%snowc                   )
+                     call print_var(mpirank, omprank, blkno, Grid%xlat_d, Grid%xlon_d, 'Interstitial%snowd_ice           ', Interstitial%snowd_ice               )
+                     call print_var(mpirank, omprank, blkno, Grid%xlat_d, Grid%xlon_d, 'Interstitial%snowd_land          ', Interstitial%snowd_land              )
                      call print_var(mpirank, omprank, blkno, Grid%xlat_d, Grid%xlon_d, 'Interstitial%snohf               ', Interstitial%snohf                   )
                      call print_var(mpirank, omprank, blkno, Grid%xlat_d, Grid%xlon_d, 'Interstitial%snowmt              ', Interstitial%snowmt                  )
                      call print_var(mpirank, omprank, blkno, Grid%xlat_d, Grid%xlon_d, 'Interstitial%stress              ', Interstitial%stress                  )
@@ -1478,7 +1471,7 @@
 #endif
              end do
 #ifdef MPI
-!             call MPI_BARRIER(Model%communicator,ierr)
+!             call MPI_BARRIER(mpicomm,ierr)
 #endif
          end do
 
@@ -1486,7 +1479,7 @@
 !$OMP BARRIER
 #endif
 #ifdef MPI
-!         call MPI_BARRIER(Model%communicator,ierr)
+!         call MPI_BARRIER(mpicomm,ierr)
 #endif
 
       end subroutine GFS_interstitialtoscreen_run
@@ -1543,7 +1536,7 @@
 !! \htmlinclude GFS_checkland_run.html
 !!
       subroutine GFS_checkland_run (me, master, blkno, im, kdt, iter, flag_iter, flag_guess, &
-              flag_init, flag_restart, frac_grid, isot, ivegsrc, stype,scolor, vtype, slope, &
+              flag_init, flag_restart, frac_grid, isot, ivegsrc, stype,scolor, vtype, slope,        &
               dry, icy, wet, lake, ocean, oceanfrac, landfrac, lakefrac, slmsk, islmsk,      &
               zorl, zorlw, zorll, zorli, fice, errmsg, errflg )
 

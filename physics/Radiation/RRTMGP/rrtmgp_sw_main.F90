@@ -1,7 +1,6 @@
 ! ###########################################################################################
 ! ###########################################################################################
 module rrtmgp_sw_main
-  use mpi_f08
   use machine,                only: kind_phys, kind_dbl_prec
   use mo_optical_props,       only: ty_optical_props_2str
   use mo_cloud_optics,        only: ty_cloud_optics
@@ -41,7 +40,7 @@ contains
          rrtmgp_root_dir,       & ! RTE-RRTMGP root directory
          rrtmgp_sw_file_clouds, & ! RRTMGP file containing K-distribution data
          rrtmgp_sw_file_gas       ! RRTMGP file containing cloud-optics data
-    character(len=*), dimension(:), intent(in), optional :: &
+    character(len=*), dimension(:), intent(in) :: &
          active_gases_array       ! List of active gases from namelist as array)
     logical, intent(in) :: &
          doGP_cldoptics_PADE,   & ! Use RRTMGP cloud-optics: PADE approximation?
@@ -50,9 +49,8 @@ contains
          doGP_sgs_cnv             ! Flag to include sgs convective clouds
     integer, intent(inout) :: &
          nrghice                  ! Number of ice-roughness categories
-    type(MPI_Comm),intent(in) :: &
-         mpicomm                  ! MPI communicator
     integer,intent(in) :: &
+         mpicomm,               & ! MPI communicator
          mpirank,               & ! Current MPI rank
          mpiroot,               & ! Master MPI rank
          rrtmgp_phys_blksz,     & ! Number of horizontal points to process at once.
@@ -120,8 +118,7 @@ contains
          isubc_sw,            & !
          iSFC
     integer,intent(in),dimension(:) :: &
-         idx                    ! Index array for daytime points
-    integer,intent(in),dimension(:), optional :: &
+         idx,                 & ! Index array for daytime points
          icseed_sw              ! Seed for random number generation for shortwave radiation
     real(kind_phys), dimension(:), intent(in) :: &
          sfc_alb_nir_dir,     & ! Surface albedo (direct)
@@ -129,7 +126,7 @@ contains
          sfc_alb_uvvis_dir,   & ! Surface albedo (direct)
          sfc_alb_uvvis_dif,   & ! Surface albedo (diffuse)
          coszen                 ! Cosize of SZA
-    real(kind_phys), dimension(:,:), intent(in), optional :: &
+    real(kind_phys), dimension(:,:), intent(in) :: &
          p_lay,               & ! Pressure @ model layer-centers (Pa)
          t_lay,               & ! Temperature (K)
          p_lev,               & ! Pressure @ model layer-interfaces (Pa)
@@ -139,8 +136,7 @@ contains
          vmr_o3,              & ! Molar-mixing ratio ozone
          vmr_ch4,             & ! Molar-mixing ratio methane
          vmr_n2o,             & ! Molar-mixing ratio nitrous oxide
-         vmr_co2                ! Molar-mixing ratio carbon dioxide
-    real(kind_phys), dimension(:,:), intent(in) :: &
+         vmr_co2,             & ! Molar-mixing ratio carbon dioxide
          cld_frac,            & ! Cloud-fraction for   stratiform   clouds
          cld_lwp,             & ! Water path for       stratiform   liquid cloud-particles
          cld_reliq,           & ! Effective radius for stratiform   liquid cloud-particles
@@ -149,8 +145,7 @@ contains
          cld_swp,             & ! Water path for                    snow   hydrometeors
          cld_resnow,          & ! Effective radius for              snow   hydrometeors
          cld_rwp,             & ! Water path for                    rain   hydrometeors
-         cld_rerain             ! Effective radius for              rain   hydrometeors
-    real(kind_phys), dimension(:,:), intent(in), optional :: &    
+         cld_rerain,          & ! Effective radius for              rain   hydrometeors
          precip_frac,         & ! Precipitation fraction
          cld_cnv_lwp,         & ! Water path for       convective   liquid cloud-particles
          cld_cnv_reliq,       & ! Effective radius for convective   liquid cloud-particles
@@ -165,7 +160,7 @@ contains
           aersw_tau,          & ! Aerosol optical depth
           aersw_ssa,          & ! Aerosol single scattering albedo
           aersw_g               ! Aerosol asymmetry paramter
-    character(len=*), dimension(:), intent(in), optional :: &
+    character(len=*), dimension(:), intent(in) :: &
          active_gases_array     ! List of active gases from namelist as array
     real(kind_phys), intent(in) :: &
          solcon                 ! Solar constant
@@ -177,7 +172,7 @@ contains
          errflg                ! CCPP error flag
     real(kind_phys), dimension(:,:), intent(inout) :: &
          cldtausw              ! Approx 10.mu band layer cloud optical depth  
-    real(kind_phys), dimension(:,:), intent(inout), optional :: &
+    real(kind_phys), dimension(:,:), intent(inout) :: &
          fluxswUP_allsky,    & ! RRTMGP upward all-sky flux profiles (W/m2)
          fluxswDOWN_allsky,  & ! RRTMGP downward all-sky flux profiles (W/m2)
          fluxswUP_clrsky,    & ! RRTMGP upward clear-sky flux profiles (W/m2)

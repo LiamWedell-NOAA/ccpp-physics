@@ -102,11 +102,7 @@ contains
 !$acc declare copy(cnvwt,outt,outq,outqc,cupclw,zuo,outu,outv)
      real(kind=kind_phys),    dimension (its:,kts:)                              &
         ,intent (in  )                      ::                         &
-        tmf
-     real(kind=kind_phys),    dimension (its:,kts:)                              &
-        ,intent (in  ), optional            ::                         &
-        qmicro, sigmain, forceqv_spechum
-
+        tmf, qmicro, sigmain, forceqv_spechum
      real(kind=kind_phys),    dimension (its:)                                      &
         ,intent (out  )                   ::                           &
         xmb_out
@@ -137,9 +133,9 @@ contains
      real(kind=kind_phys)                                                              &
         ,intent (in   )                   ::                           &
         dtime,tcrit,fv,r_d,betascu,betamcu,betadcu
-!$acc declare sigmaout
+!$acc declare sigmaout                                                                                                                                                                                                                      
      real(kind=kind_phys),    dimension (its:,kts:)                              &
-        ,intent (out), optional           ::                           &
+        ,intent (out)                     ::                           &
         sigmaout
 
 

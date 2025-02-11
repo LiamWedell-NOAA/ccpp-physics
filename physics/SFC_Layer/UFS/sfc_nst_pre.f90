@@ -30,13 +30,11 @@ contains
     integer, intent(in) :: im, nthreads
     logical, dimension(:), intent(in) :: wet
     real (kind=kind_phys), intent(in) :: tgice
-    real (kind=kind_phys), dimension(:), intent(in) :: tsfco, oceanfrac
-    real (kind=kind_phys), dimension(:), intent(in), optional :: xt, xz, dt_cool, z_c
+    real (kind=kind_phys), dimension(:), intent(in) :: tsfco, xt, xz, dt_cool, z_c, oceanfrac
     logical, intent(in) :: cplflx
 
     !  ---  input/outputs:
-    real (kind=kind_phys), dimension(:), intent(inout) :: tsurf_wat, tseal
-    real (kind=kind_phys), dimension(:), intent(inout), optional :: tref
+    real (kind=kind_phys), dimension(:), intent(inout) :: tsurf_wat, tseal, tref
 
     !  ---  outputs:
     character(len=*), intent(out) :: errmsg

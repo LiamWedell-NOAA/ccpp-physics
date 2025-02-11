@@ -159,7 +159,6 @@
   type = real
   kind = kind_phys
   intent = inout
-  optional = True
 [dd_mf]
   standard_name = instantaneous_atmosphere_downdraft_convective_mass_flux
   long_name = (downdraft mass flux) * delt
@@ -216,7 +215,6 @@
   type = real
   kind = kind_phys
   intent = inout
-  optional = True
 [mype]
   standard_name = mpi_rank
   long_name = current MPI rank
@@ -260,7 +258,7 @@
   standard_name = convective_updraft_area_fraction_at_model_interfaces
   long_name = convective updraft area fraction at model interfaces
   units = frac
-  dimensions = (horizontal_loop_extent,vertical_interface_dimension)
+  dimensions = (horizontal_loop_extent,vertical_layer_dimension)
   type = real
   kind = kind_phys
   intent = out
@@ -314,7 +312,6 @@
   type = real
   kind = kind_phys
   intent = out
-  optional = True
 [qicn]
   standard_name = mass_fraction_of_convective_cloud_ice
   long_name = mass fraction of convective cloud ice water
@@ -323,7 +320,6 @@
   type = real
   kind = kind_phys
   intent = out
-  optional = True
 [w_upi]
   standard_name = vertical_velocity_for_updraft
   long_name = vertical velocity for updraft
@@ -332,7 +328,6 @@
   type = real
   kind = kind_phys
   intent = out
-  optional = True
 [cf_upi]
   standard_name = convective_cloud_fraction_for_microphysics
   long_name = convective cloud fraction for microphysics
@@ -341,7 +336,6 @@
   type = real
   kind = kind_phys
   intent = out
-  optional = True
 [cnv_mfd]
   standard_name = detrained_mass_flux
   long_name = detrained mass flux
@@ -350,7 +344,6 @@
   type = real
   kind = kind_phys
   intent = out
-  optional = True
 [cnv_dqldt]
   standard_name = tendency_of_cloud_water_due_to_convective_microphysics
   long_name = tendency of cloud water due to convective microphysics
@@ -359,7 +352,6 @@
   type = real
   kind = kind_phys
   intent = out
-  optional = True
 [clcn]
   standard_name = convective_cloud_volume_fraction
   long_name = convective cloud volume fraction
@@ -368,7 +360,6 @@
   type = real
   kind = kind_phys
   intent = out
-  optional = True
 [cnv_fice]
   standard_name = ice_fraction_in_convective_tower
   long_name = ice fraction in convective tower
@@ -377,7 +368,6 @@
   type = real
   kind = kind_phys
   intent = out
-  optional = True
 [cnv_ndrop]
   standard_name = number_concentration_of_cloud_liquid_water_particles_for_detrainment
   long_name = droplet number concentration in convective detrainment
@@ -386,7 +376,6 @@
   type = real
   kind = kind_phys
   intent = out
-  optional = True
 [cnv_nice]
   standard_name = number_concentration_of_ice_crystals_for_detrainment
   long_name = crystal number concentration in convective detrainment
@@ -395,7 +384,6 @@
   type = real
   kind = kind_phys
   intent = out
-  optional = True
 [mp_phys]
   standard_name = control_for_microphysics_scheme
   long_name = flag for microphysics scheme

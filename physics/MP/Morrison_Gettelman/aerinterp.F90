@@ -152,7 +152,7 @@ contains
 !
 !**********************************************************************
       SUBROUTINE read_aerdataf ( me, master, iflip, idate, FHOUR, errmsg, errflg)
-      use machine, only: kind_phys, kind_dbl_prec
+      use machine, only: kind_phys, kind_io4, kind_io8
       use aerclm_def
 
 !--- in/out
@@ -165,8 +165,10 @@ contains
       logical      :: file_exist
       integer  IDAT(8),JDAT(8)
       real(kind=kind_phys) rjday
-      real(kind=kind_dbl_prec) rinc(5)
+      real(8) RINC(5)
       integer jdow, jdoy, jday
+      real(4) rinc4(5)
+      integer w3kindreal,w3kindint      
 
       integer, allocatable  :: invardims(:)
 !
@@ -184,7 +186,13 @@ contains
       IDAT(5) = IDATE(1)
       RINC = 0.
       RINC(2) = FHOUR
-      CALL W3MOVDAT(RINC,IDAT,JDAT)
+      call w3kind(w3kindreal,w3kindint)
+      if(w3kindreal == 4) then
+        rinc4 = rinc
+        CALL W3MOVDAT(RINC4,IDAT,JDAT)
+      else
+        CALL W3MOVDAT(RINC,IDAT,JDAT)
+      endif
 !
       jdow = 0
       jdoy = 0
@@ -274,7 +282,7 @@ contains
       SUBROUTINE aerinterpol( me,master,nthrds,npts,IDATE,FHOUR,iflip, jindx1,jindx2, &
                              ddy,iindx1,iindx2,ddx,lev,prsl,aerout, errmsg,errflg)
 !
-      use machine, only: kind_phys, kind_dbl_prec
+      use machine, only: kind_phys, kind_io4, kind_io8
       use aerclm_def
 
       implicit none
@@ -282,7 +290,7 @@ contains
       character(*), intent(inout) :: errmsg
       integer, intent(in) :: iflip
       integer   i1,i2, iday,j,j1,j2,l,npts,nc,n1,n2,lev,k,i,ii, klev
-      real(kind=kind_phys) fhour,temj, tx1, tx2,temi, tem, tem1, tem2
+      real(kind=kind_phys) fhour,temj, tx1, tx2,temi, tem
       real(kind=kind_phys), dimension(npts) :: temij,temiy,temjx,ddxy
       
 !
@@ -296,8 +304,11 @@ contains
       real(kind=kind_phys) aerpm(npts,levsaer,ntrcaer)
       real(kind=kind_phys) prsl(npts,lev), aerpres(npts,levsaer)
       real(kind=kind_phys) rjday
-      real(kind=kind_dbl_prec) rinc(5)
       integer jdow, jdoy, jday
+      real(8) RINC(5)
+      real(4) rinc4(5)
+      integer w3kindreal,w3kindint
+
 !
       errflg = 0
       errmsg = ' '
@@ -308,7 +319,13 @@ contains
       IDAT(5) = IDATE(1)
       RINC = 0.
       RINC(2) = FHOUR
-      CALL W3MOVDAT(RINC,IDAT,JDAT)
+      call w3kind(w3kindreal,w3kindint)
+      if(w3kindreal == 4) then
+        rinc4 = rinc
+        CALL W3MOVDAT(RINC4,IDAT,JDAT)
+      else
+        CALL W3MOVDAT(RINC,IDAT,JDAT)
+      endif
 !
       jdow = 0
       jdoy = 0
@@ -363,9 +380,10 @@ contains
 !$OMP parallel num_threads(nthrds) default(none)             &
 !$OMP          shared(npts,ntrcaer,aerin,aer_pres,prsl)      &
 !$OMP          shared(ddx,ddy,jindx1,jindx2,iindx1,iindx2)   &
-!$OMP          shared(aerpm,aerpres,aerout,lev,nthrds)       &
-!$OMP          shared(temij,temiy,temjx,ddxy,tx1,tx2)        &
-!$OMP          private(l,j,k,ii,i1,i2,j1,j2,tem,tem1,tem2)
+!$OMP          shared(aerpm,aerpres,aerout,lev,nthrds) &
+!$OMP          shared(temij,temiy,temjx,ddxy)                &
+!$OMP          private(l,j,k,ii,i1,i2,j1,j2,tem)             &
+!$OMP          copyin(tx1,tx2) firstprivate(tx1,tx2)
 
 !$OMP do
 #endif
@@ -415,10 +433,10 @@ contains
               ENDIF
              ENDDO
              tem  = 1.0 / (aerpres(j,i1) - aerpres(j,i2))
-             tem1  = (prsl(j,L) - aerpres(j,i2)) * tem
-             tem2  = (aerpres(j,i1) - prsl(j,L)) * tem
+             tx1  = (prsl(j,L) - aerpres(j,i2)) * tem
+             tx2  = (aerpres(j,i1) - prsl(j,L)) * tem
              DO ii = 1, ntrcaer
-               aerout(j,L,ii) = aerpm(j,i1,ii)*tem1 + aerpm(j,i2,ii)*tem2
+               aerout(j,L,ii) = aerpm(j,i1,ii)*tx1 + aerpm(j,i2,ii)*tx2
              ENDDO
            endif
         ENDDO   !L-loop

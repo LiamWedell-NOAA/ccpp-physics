@@ -15,7 +15,7 @@ module cu_gf_driver_pre
 !> \section arg_table_cu_gf_driver_pre_run Argument Table
 !! \htmlinclude cu_gf_driver_pre_run.html
 !!
-   subroutine cu_gf_driver_pre_run (flag_init, flag_restart, gf_coldstart, kdt, fhour, dtp, t, q, prevst, prevsq, &
+   subroutine cu_gf_driver_pre_run (flag_init, flag_restart, kdt, fhour, dtp, t, q, prevst, prevsq, &
                                     forcet, forceq, cactiv, cactiv_m, conv_act, conv_act_m,         &
                                     rrfs_sd, ntsmoke, ntdust, ntcoarsepm, chem3d, gq0,              &
                                     errmsg, errflg)
@@ -26,26 +26,24 @@ module cu_gf_driver_pre
 
       logical,          intent(in)  :: flag_init
       logical,          intent(in)  :: flag_restart
-      logical,          intent(in)  :: gf_coldstart 
       logical,          intent(in)  :: rrfs_sd
       integer,          intent(in)  :: kdt
       real(kind_phys),  intent(in)  :: fhour
       real(kind_phys),  intent(in)  :: dtp
       real(kind_phys),  intent(in)  :: t(:,:)
       real(kind_phys),  intent(in)  :: q(:,:)
-      real(kind_phys),  intent(in),    optional :: prevst(:,:)
-      real(kind_phys),  intent(in),    optional :: prevsq(:,:)
+      real(kind_phys),  intent(in)  :: prevst(:,:)
+      real(kind_phys),  intent(in)  :: prevsq(:,:)
 !$acc declare copyin(t,q,prevst,prevsq)
-      real(kind_phys),  intent(out),   optional :: forcet(:,:)
-      real(kind_phys),  intent(out),   optional :: forceq(:,:)
-      integer,          intent(out),   optional :: cactiv(:)
-      integer,          intent(out),   optional :: cactiv_m(:)
+      real(kind_phys),  intent(out) :: forcet(:,:)
+      real(kind_phys),  intent(out) :: forceq(:,:)
+      integer,          intent(out) :: cactiv(:)
+      integer,          intent(out) :: cactiv_m(:)
       integer,          intent(in)  :: ntsmoke, ntdust, ntcoarsepm
 !$acc declare copyout(forcet,forceq,cactiv,cactiv_m)
-      real(kind_phys),  intent(in),    optional :: conv_act(:)
-      real(kind_phys),  intent(in),    optional :: conv_act_m(:)
-      real(kind_phys),  intent(inout), optional :: chem3d(:,:,:)
-      real(kind_phys),  intent(inout) :: gq0(:,:,:)
+      real(kind_phys),  intent(in)  :: conv_act(:)
+      real(kind_phys),  intent(in)  :: conv_act_m(:)
+      real(kind_phys),  intent(inout) :: chem3d(:,:,:), gq0(:,:,:)
 !$acc declare copyin(conv_act,conv_act_m) copy(chem3d,gq0)
       character(len=*), intent(out) :: errmsg
       integer,          intent(out) :: errflg
@@ -60,7 +58,7 @@ module cu_gf_driver_pre
       ! For restart runs, can assume that prevst and prevsq
       ! are read from the restart files beforehand, same
       ! for conv_act.
-      if((flag_init .and. .not.flag_restart) .or. gf_coldstart) then
+      if(flag_init .and. .not.flag_restart) then
 !$acc kernels
         forcet(:,:)=0.0
         forceq(:,:)=0.0

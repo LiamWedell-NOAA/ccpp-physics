@@ -249,7 +249,6 @@
   type = real
   kind = kind_phys
   intent = inout
-  optional = True
 [nwfa2d]
   standard_name = tendency_of_hygroscopic_aerosols_at_surface_adjacent_layer
   long_name = instantaneous fake water-friendly surface aerosol source
@@ -258,7 +257,6 @@
   type = real
   kind = kind_phys
   intent = inout
-  optional = True
 [nifa2d]
   standard_name = tendency_of_nonhygroscopic_ice_nucleating_aerosols_at_surface_adjacent_layer
   long_name = instantaneous fake ice-friendly surface aerosol source
@@ -267,7 +265,6 @@
   type = real
   kind = kind_phys
   intent = inout
-  optional = True
 [nwfa]
   standard_name = mass_number_concentration_of_hygroscopic_aerosols
   long_name = number concentration of water-friendly aerosols
@@ -276,7 +273,6 @@
   type = real
   kind = kind_phys
   intent = inout
-  optional = True
 [nifa]
   standard_name = mass_number_concentration_of_nonhygroscopic_ice_nucleating_aerosols
   long_name = number concentration of ice-friendly aerosols
@@ -285,7 +281,6 @@
   type = real
   kind = kind_phys
   intent = inout
-  optional = True
 [tgrs]
   standard_name = air_temperature
   long_name = model layer mean temperature
@@ -331,7 +326,7 @@
   long_name = MPI communicator
   units = index
   dimensions = ()
-  type = MPI_Comm
+  type = integer
   intent = in
 [mpirank]
   standard_name = mpi_rank
@@ -369,14 +364,6 @@
   type = real
   kind = kind_phys
   intent = in
-  optional = True
-[is_initialized]
-  standard_name = flag_for_thompson_mp_scheme_initialization
-  long_name = flag carrying scheme initialization status
-  units = flag
-  dimensions = ()
-  type = logical
-  intent = inout
 [errmsg]
   standard_name = ccpp_error_message
   long_name = error message for error handling in CCPP
@@ -528,7 +515,6 @@
   type = real
   kind = kind_phys
   intent = inout
-  optional = True
 [nwfa]
   standard_name = mass_number_concentration_of_hygroscopic_aerosols_of_new_state
   long_name = number concentration of water-friendly aerosols
@@ -537,7 +523,6 @@
   type = real
   kind = kind_phys
   intent = inout
-  optional = True
 [nifa]
   standard_name = mass_number_concentration_of_nonhygroscopic_ice_nucleating_aerosols_of_new_state
   long_name = number concentration of ice-friendly aerosols
@@ -546,7 +531,6 @@
   type = real
   kind = kind_phys
   intent = inout
-  optional = True
 [nwfa2d]
   standard_name = tendency_of_hygroscopic_aerosols_at_surface_adjacent_layer
   long_name = instantaneous fake water-friendly surface aerosol source
@@ -555,7 +539,6 @@
   type = real
   kind = kind_phys
   intent = in
-  optional = True
 [nifa2d]
   standard_name = tendency_of_nonhygroscopic_ice_nucleating_aerosols_at_surface_adjacent_layer
   long_name = instantaneous fake ice-friendly surface aerosol source
@@ -564,7 +547,6 @@
   type = real
   kind = kind_phys
   intent = in
-  optional = True
 [aero_ind_fdb]
   standard_name = do_smoke_aerosol_indirect_feedback
   long_name = flag for wfa ifa emission indirect feedback
@@ -678,7 +660,6 @@
   type = real
   kind = kind_phys
   intent = inout
-  optional = True
 [graupel]
   standard_name = lwe_thickness_of_graupel_amount
   long_name = graupel fall on physics timestep
@@ -687,7 +668,6 @@
   type = real
   kind = kind_phys
   intent = inout
-  optional = True
 [ice]
   standard_name = lwe_thickness_of_ice_amount
   long_name = ice fall on physics timestep
@@ -696,7 +676,6 @@
   type = real
   kind = kind_phys
   intent = inout
-  optional = True
 [snow]
   standard_name = lwe_thickness_of_snow_amount
   long_name = snow fall on physics timestep
@@ -705,7 +684,6 @@
   type = real
   kind = kind_phys
   intent = inout
-  optional = True
 [sr]
   standard_name = ratio_of_snowfall_to_rainfall
   long_name = ratio of snowfall to large-scale rainfall
@@ -757,7 +735,7 @@
   long_name = MPI communicator
   units = index
   dimensions = ()
-  type = MPI_Comm
+  type = integer
   intent = in
 [mpirank]
   standard_name = mpi_rank
@@ -795,7 +773,6 @@
   type = real
   kind = kind_phys
   intent = inout
-  optional = True
 [reset_diag3d]
   standard_name = flag_reset_extended_diagnostics_output_arrays_from_thompson_microphysics
   long_name = flag for resetting extended diagnostics output arrays from thompson microphysics
@@ -810,7 +787,6 @@
   dimensions = (horizontal_loop_extent,vertical_layer_dimension)
   type = real
   intent = in
-  optional = True
 [spp_mp]
   standard_name = control_for_microphysics_spp_perturbations
   long_name = control for microphysics spp perturbations
@@ -833,7 +809,6 @@
   type = real
   kind = kind_phys
   intent = in
-  optional = True
 [spp_stddev_cutoff]
   standard_name = magnitude_of_spp_standard_deviation_cutoff
   long_name = magnitude of spp standard deviation cutoff
@@ -842,7 +817,6 @@
   type = real
   kind = kind_phys
   intent = in
-  optional = True
 [spp_var_list]
   standard_name = perturbed_spp_schemes
   long_name = perturbed spp schemes
@@ -851,7 +825,6 @@
   type = character
   kind = len=10
   intent = in
-  optional = True
 [cplchm]
   standard_name = flag_for_chemistry_coupling
   long_name = flag controlling cplchm collection (default off)
@@ -867,7 +840,6 @@
   type = real
   kind = kind_phys
   intent = inout
-  optional = True
 [pfl_lsan]
   standard_name = liquid_flux_due_to_large_scale_precipitation
   long_name = instantaneous 3D flux of liquid water from nonconvective precipitation
@@ -875,14 +847,6 @@
   dimensions = (horizontal_loop_extent,vertical_layer_dimension)
   type = real
   kind = kind_phys
-  intent = inout
-  optional = True
-[is_initialized]
-  standard_name = flag_for_thompson_mp_scheme_initialization
-  long_name = flag carrying scheme initialization status
-  units = flag
-  dimensions = ()
-  type = logical
   intent = inout
 [errmsg]
   standard_name = ccpp_error_message
@@ -904,13 +868,6 @@
 [ccpp-arg-table]
   name = mp_thompson_finalize
   type = scheme
-[is_initialized]
-  standard_name = flag_for_thompson_mp_scheme_initialization
-  long_name = flag carrying scheme initialization status
-  units = flag
-  dimensions = ()
-  type = logical
-  intent = inout
 [errmsg]
   standard_name = ccpp_error_message
   long_name = error message for error handling in CCPP

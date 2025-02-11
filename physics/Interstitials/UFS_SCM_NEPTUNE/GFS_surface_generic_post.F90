@@ -45,7 +45,7 @@
 !> \section arg_table_GFS_surface_generic_post_run Argument Table
 !! \htmlinclude GFS_surface_generic_post_run.html
 !!
-      subroutine GFS_surface_generic_post_run (im, cplflx, cplaqm, cplchm, cplwav, cpllnd, cpl_fire, lssav, dry, icy, wet,          &
+      subroutine GFS_surface_generic_post_run (im, cplflx, cplaqm, cplchm, cplwav, cpllnd, lssav, dry, icy, wet,                    &
         lsm, lsm_noahmp, dtf, ep1d, gflx, tgrs_1, qgrs_1, ugrs_1, vgrs_1,                                                           &
         adjsfcdlw, adjsfcdsw, adjnirbmd, adjnirdfd, adjvisbmd, adjvisdfd, adjsfculw, adjsfculw_wat, adjnirbmu, adjnirdfu,           &
         adjvisbmu, adjvisdfu, t2m, q2m, u10m, v10m, tsfc, tsfc_wat, pgr, xcosz, evbs, evcw, trans, sbsno, snowc, snohf, pah, pahi,  &
@@ -59,23 +59,21 @@
         implicit none
 
         integer,                                intent(in) :: im
-        logical,                                intent(in) :: cplflx, cplaqm, cplchm, cplwav, cpllnd, cpl_fire, lssav
+        logical,                                intent(in) :: cplflx, cplaqm, cplchm, cplwav, cpllnd, lssav
         logical, dimension(:),                  intent(in) :: dry, icy, wet
         integer,                                intent(in) :: lsm, lsm_noahmp
         real(kind=kind_phys),                   intent(in) :: dtf
 
         real(kind=kind_phys), dimension(:),  intent(in)  :: ep1d, gflx, tgrs_1, qgrs_1, ugrs_1, vgrs_1, adjsfcdlw, adjsfcdsw,  &
           adjnirbmd, adjnirdfd, adjvisbmd, adjvisdfd, adjsfculw, adjsfculw_wat, adjnirbmu, adjnirdfu, adjvisbmu, adjvisdfu,    &
-          t2m, q2m, u10m, v10m, tsfc, tsfc_wat, pgr, xcosz, evbs, evcw, trans, sbsno, snowc, snohf, pah, ecan, etran, edir
-        real(kind=kind_phys), dimension(:),  intent(in), optional  ::   &
+          t2m, q2m, u10m, v10m, tsfc, tsfc_wat, pgr, xcosz, evbs, evcw, trans, sbsno, snowc, snohf, pah, ecan, etran, edir,    &
           waxy
 
-        real(kind=kind_phys), dimension(:),  intent(inout) :: epi, gfluxi, t1, q1, u1, v1,gflux, evbsa,       &
-          evcwa, transa, sbsnoa, snowca, snohfa, ep, tecan, tetran, tedir
-        real(kind=kind_phys), dimension(:),  intent(inout), optional :: pahi, dlwsfci_cpl, dswsfci_cpl, dlwsfc_cpl, &
+        real(kind=kind_phys), dimension(:),  intent(inout) :: epi, gfluxi, t1, q1, u1, v1, dlwsfci_cpl, dswsfci_cpl, dlwsfc_cpl, &
           dswsfc_cpl, dnirbmi_cpl, dnirdfi_cpl, dvisbmi_cpl, dvisdfi_cpl, dnirbm_cpl, dnirdf_cpl, dvisbm_cpl, dvisdf_cpl,        &
           nlwsfci_cpl, nlwsfc_cpl, t2mi_cpl, q2mi_cpl, u10mi_cpl, v10mi_cpl, tsfci_cpl, psurfi_cpl, nnirbmi_cpl, nnirdfi_cpl,    &
-          nvisbmi_cpl, nvisdfi_cpl, nswsfci_cpl, nswsfc_cpl, nnirbm_cpl, nnirdf_cpl, nvisbm_cpl, nvisdf_cpl, paha, twa
+          nvisbmi_cpl, nvisdfi_cpl, nswsfci_cpl, nswsfc_cpl, nnirbm_cpl, nnirdf_cpl, nvisbm_cpl, nvisdf_cpl, gflux, evbsa,       &
+          evcwa, transa, sbsnoa, snowca, snohfa, ep, paha, tecan, tetran, tedir, twa, pahi
 
         real(kind=kind_phys), dimension(:), intent(inout) :: runoff, srunoff
         real(kind=kind_phys), dimension(:), intent(in)    :: drain, runof
@@ -136,18 +134,7 @@
             dswsfci_cpl (i) = adjsfcdsw(i)
             dlwsfc_cpl  (i) = dlwsfc_cpl(i) + adjsfcdlw(i)*dtf
             dswsfc_cpl  (i) = dswsfc_cpl(i) + adjsfcdsw(i)*dtf
-          enddo
-        endif
-
-        if (cplflx .or. cpllnd .or. cpl_fire) then
-          do i=1,im
             psurfi_cpl  (i) = pgr(i)
-          enddo
-        endif
-        if (cplflx .or. cpl_fire) then
-          do i=1,im
-            t2mi_cpl    (i) = t2m(i)
-            q2mi_cpl    (i) = q2m(i)
           enddo
         endif
 
@@ -166,6 +153,8 @@
               nlwsfci_cpl(i) = adjsfcdlw(i) - adjsfculw_wat(i)
             endif
             nlwsfc_cpl  (i) = nlwsfc_cpl(i) + nlwsfci_cpl(i)*dtf
+            t2mi_cpl    (i) = t2m(i)
+            q2mi_cpl    (i) = q2m(i)
           enddo
         endif
 

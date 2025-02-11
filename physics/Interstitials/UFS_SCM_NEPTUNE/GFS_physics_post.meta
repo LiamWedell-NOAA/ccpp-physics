@@ -29,7 +29,6 @@
   type = real
   kind = kind_phys
   intent = inout
-  optional = True
 [dtidx]
   standard_name = cumulative_change_of_state_variables_outer_index
   long_name = index of state-variable and process in last dimension of diagnostic tendencies array AKA cumulative_change_index
@@ -129,7 +128,6 @@
   type = real
   kind = kind_phys
   intent = in
-  optional = True
 [do3_dt_ozmx]
   standard_name = ozone_tendency_due_to_ozone_mixing_ratio
   long_name = ozone tendency due to ozone mixing ratio
@@ -138,7 +136,6 @@
   type = real
   kind = kind_phys
   intent = in
-  optional = True
 [do3_dt_temp]
   standard_name = ozone_tendency_due_to_temperature
   long_name = ozone tendency due to temperature
@@ -147,7 +144,6 @@
   type = real
   kind = kind_phys
   intent = in
-  optional = True
 [do3_dt_ohoz]
   standard_name = ozone_tendency_due_to_overhead_ozone_column
   long_name = ozone tendency due to overhead ozone column
@@ -156,7 +152,6 @@
   type = real
   kind = kind_phys
   intent = in
-  optional = True
 [errmsg]
   standard_name = ccpp_error_message
   long_name = error message for error handling in CCPP

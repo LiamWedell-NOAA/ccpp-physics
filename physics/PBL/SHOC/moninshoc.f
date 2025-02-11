@@ -78,8 +78,7 @@
      &  tau
       real(kind=kind_phys), dimension(:,:,:), intent(inout) :: rtg
 
-      real(kind=kind_phys), dimension(:,:,:), intent(inout), optional ::&
-     &     dtend
+      real(kind=kind_phys), dimension(:,:,:),   intent(inout) :: dtend
       integer,              dimension(:,:),     intent(in)    :: dtidx
       integer, intent(in) :: index_of_temperature, index_of_x_wind,
      &  index_of_y_wind, index_of_process_pbl, ntqv

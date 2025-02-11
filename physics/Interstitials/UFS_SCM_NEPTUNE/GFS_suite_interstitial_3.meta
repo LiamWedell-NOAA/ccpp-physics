@@ -244,7 +244,6 @@
   type = real
   kind = kind_phys
   intent = inout
-  optional = True
 [sigmaout]
   standard_name = updraft_area_fraction_updated_by_physics
   long_name = convective updraft area fraction updated by physics
@@ -253,7 +252,6 @@
   type = real
   kind = kind_phys
   intent = inout
-  optional = True
 [qmicro]
   standard_name = instantaneous_tendency_of_specific_humidity_due_to_microphysics
   long_name = moisture tendency due to microphysics
@@ -262,7 +260,6 @@
   type = real
   kind = kind_phys
   intent = out
-  optional = True
 [imp_physics]
   standard_name = control_for_microphysics_scheme
   long_name = choice of microphysics scheme

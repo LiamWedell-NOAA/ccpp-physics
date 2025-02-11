@@ -95,18 +95,13 @@ contains
     integer,          intent(in)    :: fileID
     character(len=*), intent(in)    :: file
     character(len=128)              :: err_message
-    integer :: i1, i2, i3, ierr
+    integer :: i1, i2, i3
     real(kind=4), dimension(:), allocatable :: lat4, pres4, time4, tempin
     real(kind=4) :: blatc4
 
-    ! initialize error message
-    err_message = ""
-
     ! Get dimensions from data file
-    open(unit=fileID,file=trim(file), form='unformatted', convert='big_endian', iostat=ierr, iomsg=err_message)
-    if (ierr /= 0 ) return
-    read (fileID, iostat=ierr, iomsg=err_message) this%ncf, this%nlat, this%nlev, this%ntime
-    if (ierr /= 0 ) return
+    open(unit=fileID,file=trim(file), form='unformatted', convert='big_endian')
+    read (fileID) this%ncf, this%nlat, this%nlev, this%ntime
     rewind(fileID)
     
     allocate (this%lat(this%nlat))
@@ -116,8 +111,7 @@ contains
     allocate (this%data(this%nlat,this%nlev,this%ncf,this%ntime))
     
     allocate(lat4(this%nlat), pres4(this%nlev), time4(this%ntime+1))
-    read (fileID, iostat=ierr, iomsg=err_message) this%ncf, this%nlat, this%nlev, this%ntime, lat4, pres4, time4
-    if (ierr /= 0 ) return
+    read (fileID) this%ncf, this%nlat, this%nlev, this%ntime, lat4, pres4, time4
     
     ! Store 
     this%pres(:) = pres4(:)
@@ -130,8 +124,7 @@ contains
     do i1=1,this%ntime
        do i2=1,this%ncf
           do i3=1,this%nlev
-             read(fileID, iostat=ierr, iomsg=err_message) tempin
-             if (ierr /= 0 ) return
+             read(fileID) tempin
              this%data(:,i3,i2,i1) = tempin(:)
           enddo
        enddo
@@ -205,9 +198,8 @@ contains
   ! #########################################################################################
   ! Procedure (type-bound) for NRL prognostic ozone (2015).
   ! #########################################################################################
-  subroutine run_o3prog_2015(this, con_1ovg, dt, p, t, dp, ozpl, oz, do3_dt_prd,            &
+  subroutine run_o3prog_2015(this, con_1ovg, dt, p, t, dp, ozpl, oz, do_diag, do3_dt_prd, &
        do3_dt_ozmx, do3_dt_temp, do3_dt_ohoz)
-
     class(ty_ozphys), intent(in) :: this
     real(kind_phys),  intent(in) :: &
          con_1ovg       ! Physical constant: One divided by gravitational acceleration (m-1 s2)
@@ -221,7 +213,8 @@ contains
          ozpl           ! Ozone forcing data
     real(kind_phys), intent(inout), dimension(:,:) :: &
          oz             ! Ozone concentration updated by physics
-    real(kind_phys), intent(inout), dimension(:,:), optional :: &
+    logical, intent(in) :: do_diag
+    real(kind_phys), intent(inout), dimension(:,:) :: &
          do3_dt_prd,  & ! Physics tendency: production and loss effect
          do3_dt_ozmx, & ! Physics tendency: ozone mixing ratio effect
          do3_dt_temp, & ! Physics tendency: temperature effect
@@ -305,11 +298,12 @@ contains
        enddo
 
        ! Diagnostics (optional)
-       if (present(do3_dt_prd))  do3_dt_prd(:,iLev)  = prod(:,1) * dt
-       if (present(do3_dt_ozmx)) do3_dt_ozmx(:,iLev) = prod(:,2) * (oz(:,iLev) - prod(:,6)) * dt
-       if (present(do3_dt_temp)) do3_dt_temp(:,iLev) = prod(:,3)*(t(:,iLev)-prod(:,5))*dt
-       if (present(do3_dt_ohoz)) do3_dt_ohoz(:,iLev) = prod(:,4) * (colo3(:,iLev)-coloz(:,iLev))*dt
-
+       if (do_diag) then
+          do3_dt_prd(:,iLev)  = (prod(:,1)-prod(:,2)*prod(:,6))*dt
+          do3_dt_ozmx(:,iLev) = (oz(:,iLev) - ozib(:))
+          do3_dt_temp(:,iLev) = prod(:,3)*(t(:,iLev)-prod(:,5))*dt
+          do3_dt_ohoz(:,iLev) = prod(:,4) * (colo3(:,iLev)-coloz(:,iLev))*dt
+       endif
     enddo
 
     return
@@ -318,9 +312,8 @@ contains
   ! #########################################################################################
   ! Procedure (type-bound) for NRL prognostic ozone (2006).
   ! #########################################################################################
-  subroutine run_o3prog_2006(this, con_1ovg, dt, p, t, dp, ozpl, oz, do3_dt_prd,            &
+  subroutine run_o3prog_2006(this, con_1ovg, dt, p, t, dp, ozpl, oz, do_diag, do3_dt_prd, &
        do3_dt_ozmx, do3_dt_temp, do3_dt_ohoz)
-
     class(ty_ozphys), intent(in) :: this
     real(kind_phys),  intent(in) :: &
          con_1ovg       ! Physical constant: One divided by gravitational acceleration (m-1 s2)
@@ -334,7 +327,8 @@ contains
          ozpl           ! Ozone forcing data
     real(kind_phys), intent(inout), dimension(:,:) :: &
          oz             ! Ozone concentration updated by physics
-    real(kind_phys), intent(inout), dimension(:,:), optional :: &
+    logical, intent(in) :: do_diag
+    real(kind_phys), intent(inout), dimension(:,:) :: &
          do3_dt_prd,  & ! Physics tendency: production and loss effect
          do3_dt_ozmx, & ! Physics tendency: ozone mixing ratio effect
          do3_dt_temp, & ! Physics tendency: temperature effect
@@ -430,11 +424,12 @@ contains
        endif
 
        ! Diagnostics (optional)
-       if (present(do3_dt_prd))  do3_dt_prd(:,iLev)  = prod(:,1)*dt
-       if (present(do3_dt_ozmx)) do3_dt_ozmx(:,iLev) = (oz(:,iLev) - ozib(:))
-       if (present(do3_dt_temp)) do3_dt_temp(:,iLev) = prod(:,3) * t(:,iLev) * dt
-       if (present(do3_dt_ohoz)) do3_dt_ohoz(:,iLev) = prod(:,4) * colo3(:,iLev) * dt
-
+       if (do_diag) then
+          do3_dt_prd(:,iLev)  = prod(:,1)*dt
+          do3_dt_ozmx(:,iLev) = (oz(:,iLev) - ozib(:))
+          do3_dt_temp(:,iLev) = prod(:,3) * t(:,iLev) * dt
+          do3_dt_ohoz(:,iLev) = prod(:,4) * colo3(:,iLev) * dt
+       endif
     enddo
 
     return
@@ -531,18 +526,12 @@ contains
 
     ! Locals
     real(kind=4) :: blatc4
-    integer :: iLev, iLat, imo, ierr
+    integer :: iLev, iLat, imo
     real(kind=4), allocatable :: o3clim4(:,:,:), pstr4(:)
     integer, allocatable      :: imond(:), ilatt(:,:)
 
-    ! initialize error message
-    err_message = ""
-
-    open(unit=fileID,file=trim(file),form='unformatted',convert='big_endian', iostat=ierr, iomsg=err_message)
-    if (ierr /= 0 ) return
-    read (fileID,end=101,iostat=ierr,iomsg=err_message) this%nlatc, this%nlevc, this%ntimec, blatc4
-    if (ierr /= 0 ) return
-
+    open(unit=fileID,file=trim(file), form='unformatted', convert='big_endian')
+    read (fileID,end=101) this%nlatc, this%nlevc, this%ntimec, blatc4
 101 if (this%nlevc  < 10 .or. this%nlevc > 100) then
        rewind (fileID)
        this%nlevc = 17
@@ -562,18 +551,15 @@ contains
     allocate (this%pkstr(this%nlevc), this%pstr(this%nlevc), this%datac(this%nlatc,this%nlevc,12))
     if ( this%nlevc == 17 ) then ! For the operational ozone climatology
        do iLev = 1, this%nlevc
-          read (fileID,15,iostat=ierr,iomsg=err_message) pstr4(iLev)
-          if (ierr /= 0 ) return
+          read (fileID,15) pstr4(iLev)
 15        format(f10.3)
        enddo
 
        do imo = 1, 12
           do iLat = 1, this%nlatc
-             read (fileID,16,iostat=ierr,iomsg=err_message) imond(imo), ilatt(iLat,imo), (o3clim4(iLat,iLev,imo),iLev=1,10)
-             if (ierr /= 0 ) return
+             read (fileID,16) imond(imo), ilatt(iLat,imo), (o3clim4(iLat,iLev,imo),iLev=1,10)
 16           format(i2,i4,10f6.2)
-             read (fileID,20,iostat=ierr,iomsg=err_message) (o3clim4(iLat,iLev,imo),iLev=11,this%nlevc)
-             if (ierr /= 0 ) return
+             read (fileID,20) (o3clim4(iLat,iLev,imo),iLev=11,this%nlevc)
 20           format(6x,10f6.2)
           enddo
        enddo
@@ -585,8 +571,7 @@ contains
        
        do imo = 1, 12
           do iLev = 1, this%nlevc
-              read (fileID,iostat=ierr,iomsg=err_message) (o3clim4(iLat,iLev,imo),iLat=1,this%nlatc)
-              if (ierr /= 0 ) return
+              read (fileID) (o3clim4(iLat,iLev,imo),iLat=1,this%nlatc)
            enddo
         enddo
      endif   ! end if_this%nlevc_block

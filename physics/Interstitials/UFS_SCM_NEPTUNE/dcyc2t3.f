@@ -36,7 +36,7 @@
 !          ( solhr,slag,sdec,cdec,sinlat,coslat,                        !
 !            xlon,coszen,tsfc_lnd,tsfc_ice,tsfc_wat,                    !
 !            tf,tsflw,sfcemis_lnd,sfcemis_ice,sfcemis_wat,              !
-!            sfcdsw,sfcnsw,sfcdlw,sfculw,swh,swhc,hlw,hlwc,             !
+!            sfcdsw,sfcdswc,sfcnsw,sfcdlw,sfculw,swh,swhc,hlw,hlwc,     !
 !            sfcnirbmu,sfcnirdfu,sfcvisbmu,sfcvisdfu,                   !
 !            sfcnirbmd,sfcnirdfd,sfcvisbmd,sfcvisdfd,                   !
 !            im, levs, deltim, fhswr,                                   !
@@ -44,7 +44,7 @@
 !      input/output:                                                    !
 !            dtdt,dtdtnp,                                               !
 !      outputs:                                                         !
-!            adjsfcdsw,adjsfcnsw,adjsfcdlw,                             !
+!            adjsfcdsw,adjsfcdswc,adjsfcnsw,adjsfcdlw,                  !
 !            adjsfculw_lnd,adjsfculw_ice,adjsfculw_wat,xmu,xcosz,       !
 !            adjnirbmu,adjnirdfu,adjvisbmu,adjvisdfu,                   !
 !            adjdnnbmd,adjdnndfd,adjdnvbmd,adjdnvdfd)                   !
@@ -68,6 +68,7 @@
 !     sfcemis_wat(im) - real, surface emissivity (fraction) o. ocean (k)!
 !     tsflw  (im)  - real, sfc air (layer 1) temp in k saved in lw call !
 !     sfcdsw (im)  - real, total sky sfc downward sw flux ( w/m**2 )    !
+!     sfcdswc (im) - real, clear sky sfc downward sw flux ( w/m**2 )    !
 !     sfcnsw (im)  - real, total sky sfc net sw into ground (w/m**2)    !
 !     sfcdlw (im)  - real, total sky sfc downward lw flux ( w/m**2 )    !
 !     sfculw (im)  - real, total sky sfc upward lw flux ( w/m**2 )    !
@@ -98,6 +99,7 @@
 !                                                                       !
 !  outputs:                                                             !
 !     adjsfcdsw(im)- real, time step adjusted sfc dn sw flux (w/m**2)   !
+!     adjsfcdswc(im)- real, time step adjusted sfc dn sw flux (w/m**2)  !
 !     adjsfcnsw(im)- real, time step adj sfc net sw into ground (w/m**2)!
 !     adjsfcdlw(im)- real, time step adjusted sfc dn lw flux (w/m**2)   !
 !     adjsfculw_lnd(im)- real, sfc upw. lw flux at current time (w/m**2)!
@@ -169,7 +171,7 @@
      &       con_g, con_cp, con_pi, con_sbc,                            &
      &       xlon,coszen,tsfc_lnd,tsfc_ice,tsfc_wat,tf,tsflw,tsfc,      &
      &       sfcemis_lnd, sfcemis_ice, sfcemis_wat,                     &
-     &       sfcdsw,sfcnsw,sfcdlw,swh,swhc,hlw,hlwc,                    &
+     &       sfcdsw,sfcdswc,sfcnsw,sfcdlw,swh,swhc,hlw,hlwc,            &
      &       sfcnirbmu,sfcnirdfu,sfcvisbmu,sfcvisdfu,                   &
      &       sfcnirbmd,sfcnirdfd,sfcvisbmd,sfcvisdfd,                   &
      &       im, levs, deltim, fhswr,                                   &
@@ -181,7 +183,7 @@
 !  ---  input/output:
      &       dtdt,dtdtnp,htrlw,                                         &
 !  ---  outputs:
-     &       adjsfcdsw,adjsfcnsw,adjsfcdlw,                             &
+     &       adjsfcdsw,adjsfcdswc,adjsfcnsw,adjsfculw,adjsfcdlw,        &
      &       adjsfculw_lnd,adjsfculw_ice,adjsfculw_wat,xmu,xcosz,       &
      &       adjnirbmu,adjnirdfu,adjvisbmu,adjvisdfu,                   &
      &       adjnirbmd,adjnirdfd,adjvisbmd,adjvisdfd,                   &
@@ -213,10 +215,10 @@
      &     deltim, fhswr, lfnc_k, lfnc_p0
 
       real(kind=kind_phys), dimension(:), intent(in) ::                 &
-     &      sinlat, coslat, xlon, coszen, tf, tsflw, sfcdlw,            &
-     &      sfcdsw, sfcnsw, sfculw, tsfc
-      real(kind=kind_phys), dimension(:), intent(in), optional ::       &
-     &      sfculw_med, tsfc_radtime
+     &     sinlat, coslat, xlon, coszen, tf, tsflw, sfcdlw,             &
+     &     sfcdsw, sfcdswc, sfcnsw, sfculw, sfculw_med, tsfc,           &
+     &     tsfc_radtime
+
       real(kind=kind_phys), dimension(:), intent(in) ::                 &
      &                         tsfc_lnd, tsfc_ice, tsfc_wat,            &
      &                         sfcemis_lnd, sfcemis_ice, sfcemis_wat
@@ -228,8 +230,7 @@
       real(kind=kind_phys), dimension(:,:), intent(in) :: swh, hlw,     &
      &                                     swhc, hlwc, p_lay, t_lay
 
-      real(kind=kind_phys), dimension(:,:), intent(in) :: p_lev
-      real(kind=kind_phys), dimension(:,:), intent(in), optional ::     &
+      real(kind=kind_phys), dimension(:,:), intent(in) :: p_lev,        &
      &     flux2D_lwUP, flux2D_lwDOWN, fluxlwUP_jac
 
       real(kind_phys),           intent(in   ) :: con_g, con_cp,        &
@@ -239,15 +240,14 @@
 
 
 !  ---  input/output:
-      real(kind=kind_phys), dimension(:,:), intent(inout) :: dtdt
-      real(kind=kind_phys), dimension(:,:), intent(inout), optional ::  &
-     &      dtdtnp, htrlw
+      real(kind=kind_phys), dimension(:,:), intent(inout) :: dtdt, htrlw
+      real(kind=kind_phys), dimension(:,:), intent(inout) :: dtdtnp
 
 !  ---  outputs:
       real(kind=kind_phys), dimension(:), intent(out) ::                &
-     &      adjsfcdsw, adjsfcnsw, adjsfcdlw, xmu, xcosz,                &
+     &      adjsfcdsw, adjsfcnsw, adjsfcdlw, adjsfculw, xmu, xcosz,     &
      &      adjnirbmu, adjnirdfu, adjvisbmu, adjvisdfu,                 &
-     &      adjnirbmd, adjnirdfd, adjvisbmd, adjvisdfd
+     &      adjnirbmd, adjnirdfd, adjvisbmd, adjvisdfd, adjsfcdswc
 
       real(kind=kind_phys), dimension(:), intent(out) ::                &
      &      adjsfculw_lnd, adjsfculw_ice, adjsfculw_wat
@@ -355,7 +355,7 @@
 
 !     if (lprnt .and. i == ipr) write(0,*)' in dcyc3: dry==',dry(i)
 !    &,' wet=',wet(i),' icy=',icy(i),' tsfc3=',tsfc3(i,:)
-!    &,' sfcemis=',sfcemis(i,:)
+!    &,' sfcemis=',sfcemis(i,:),' adjsfculw=',adjsfculw(i,:)
 !
 
 !>  - normalize by average value over radiation period for daytime.
@@ -370,6 +370,7 @@
 
         adjsfcnsw(i) = sfcnsw(i)    * xmu(i)
         adjsfcdsw(i) = sfcdsw(i)    * xmu(i)
+        adjsfcdswc(i)= sfcdswc(i)   * xmu(i)
 
         adjnirbmu(i) = sfcnirbmu(i) * xmu(i)
         adjnirdfu(i) = sfcnirdfu(i) * xmu(i)

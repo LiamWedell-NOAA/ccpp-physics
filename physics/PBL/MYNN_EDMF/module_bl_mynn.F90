@@ -466,10 +466,8 @@ CONTAINS
     real(kind_phys), dimension(:,:), intent(in):: ozone
     real(kind_phys), dimension(:),   intent(in):: ust,       &
          &ch,qsfc,ps,wspd
-    real(kind_phys), dimension(:,:), intent(inout), optional :: &
-         &Qke,Tsq,Qsq,Cov
     real(kind_phys), dimension(:,:), intent(inout) ::        &
-         &qke_adv
+         &Qke,Tsq,Qsq,Cov,qke_adv
     real(kind_phys), dimension(:,:), intent(inout) ::        &
          &rublten,rvblten,rthblten,rqvblten,rqcblten,        &
          &rqiblten,rqsblten,rqniblten,rqncblten,             &
@@ -477,12 +475,12 @@ CONTAINS
     real(kind_phys), dimension(:,:), intent(inout) :: dozone
     real(kind_phys), dimension(:,:), intent(in)    :: rthraten
 
-    real(kind_phys), dimension(:,:), intent(out), optional   :: exch_h,exch_m
+    real(kind_phys), dimension(:,:), intent(out)   :: exch_h,exch_m
     real(kind_phys), dimension(:),   intent(in)    :: xland, &
          &ts,znt,hfx,qfx,uoce,voce
 
    !These 10 arrays are only allocated when bl_mynn_output > 0
-   real(kind_phys), dimension(:,:), intent(inout), optional :: &
+   real(kind_phys), dimension(:,:), intent(inout) ::         &
          & edmf_a,edmf_w,edmf_qt,edmf_thl,edmf_ent,edmf_qc,  &
          & sub_thl3D,sub_sqv3D,det_thl3D,det_sqv3D
 
@@ -495,35 +493,32 @@ CONTAINS
     real(kind_phys), dimension(ims:ime) :: psig_bl,psig_shcu
 
     integer,dimension(:),intent(INOUT) ::                    &
-         &KPBL
-    integer,dimension(:),intent(INOUT), optional ::                    &
-         &ktop_plume
+         &KPBL,ktop_plume
 
-    real(kind_phys), dimension(:), intent(out), optional ::            &
+    real(kind_phys), dimension(:), intent(out) ::            &
          &maxmf,maxwidth,ztop_plume
 
-    real(kind_phys), dimension(:,:), intent(inout), optional :: el_pbl
+    real(kind_phys), dimension(:,:), intent(inout) :: el_pbl
 
-    real(kind_phys), dimension(:,:), intent(inout), optional :: &
+    real(kind_phys), dimension(:,:), intent(inout) ::        &
          &qWT,qSHEAR,qBUOY,qDISS,dqke
     ! 3D budget arrays are not allocated when tke_budget == 0
     ! 1D (local) budget arrays are used for passing between subroutines.
     real(kind_phys), dimension(kts:kte) ::                   &
          &qwt1,qshear1,qbuoy1,qdiss1,dqke1,diss_heat
 
-    real(kind_phys), dimension(:,:), intent(out), optional :: Sh3D,Sm3D
+    real(kind_phys), dimension(:,:), intent(out) :: Sh3D,Sm3D
 
-    real(kind_phys), dimension(:,:), intent(inout), optional :: &
+    real(kind_phys), dimension(:,:), intent(inout) ::        &
          &qc_bl,qi_bl,cldfra_bl
     real(kind_phys), dimension(kts:kte) :: qc_bl1D,qi_bl1D,                     &
          &cldfra_bl1D,qc_bl1D_old,qi_bl1D_old,cldfra_bl1D_old
 
 ! smoke/chemical arrays
     integer, intent(IN   ) ::   nchem, kdvel, ndvel
-    real(kind_phys), dimension(:,:,:), intent(INOUT), optional :: chem3d
-    real(kind_phys), dimension(:,:),   intent(IN), optional    :: vdep
-    real(kind_phys), dimension(:),     intent(IN), optional    :: frp
-    real(kind_phys), dimension(:),     intent(IN)    :: EMIS_ANT_NO
+    real(kind_phys), dimension(:,:,:), intent(INOUT) :: chem3d
+    real(kind_phys), dimension(:,:),   intent(IN)    :: vdep
+    real(kind_phys), dimension(:),     intent(IN)    :: frp,EMIS_ANT_NO
     !local
     real(kind_phys), dimension(kts:kte  ,nchem)      :: chem1
     real(kind_phys), dimension(kts:kte+1,nchem)      :: s_awchem1
@@ -580,7 +575,7 @@ CONTAINS
 
     ! Stochastic fields 
     integer,  intent(IN)                         :: spp_pbl
-    real(kind_phys), dimension(:,:), intent(IN), optional  :: pattern_spp_pbl
+    real(kind_phys), dimension(:,:), intent(IN)  :: pattern_spp_pbl
     real(kind_phys), dimension(KTS:KTE)          :: rstoch_col
 
     ! Substepping TKE

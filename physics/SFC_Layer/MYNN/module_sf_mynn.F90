@@ -284,7 +284,7 @@ CONTAINS
                                                         th3d,pi3d
 
       !GJF: This array must be assumed-shape since it is conditionally-allocated
-      REAL(kind_phys), DIMENSION( :,: ), OPTIONAL,                 &
+      REAL(kind_phys), DIMENSION( :,: ),                           &
                             INTENT(IN) ::         pattern_spp_sfc
 !===================================
 ! 2D VARIABLES
@@ -304,23 +304,21 @@ CONTAINS
       REAL(kind_phys), DIMENSION( ims:ime )                      , &
                             INTENT(INOUT)          ::    HFLX,HFX, &
                                                          QFLX,QFX, &
-                                                             RMOL, &
+                                                               LH, &
+                                                         MOL,RMOL, &
                                                              QSFC, &
                                                               QGH, &
                                                               ZNT, &
+                                                              ZOL, &
+                                                             USTM, &
                                                               CPM, &
+                                                             CHS2, &
+                                                             CQS2, &
                                                               CHS, &
                                                                CH, &
                                                         FLHC,FLQC, &
                                                       GZ1OZ0,WSPD, &
-                                                        PSIM,PSIH
-      REAL(kind_phys), DIMENSION( ims:ime ), OPTIONAL            , &
-                            INTENT(INOUT)          ::        USTM, &
-                                                             CHS2, &
-                                                             CQS2, &
-                                                               LH, &
-                                                              ZOL, &
-                                                              MOL, &
+                                                        PSIM,PSIH, &
                                                             WSTAR
 
       LOGICAL, DIMENSION( ims:ime ), INTENT(IN)    ::              &
@@ -609,20 +607,18 @@ CONTAINS
                                                              RMOL
       REAL(kind_phys), DIMENSION( ims:ime ),                       &
                             INTENT(INOUT)           ::  HFLX,QFLX, &
+                                                           LH,MOL, &
                                                          QGH,QSFC, &
                                                               ZNT, &
+                                                              ZOL, &
                                                               CPM, &
+                                                        CHS2,CQS2, &
                                                            CHS,CH, &
                                                         FLHC,FLQC, &
                                                            GZ1OZ0, &
                                                              WSPD, &
                                                              PSIM, &
-                                                             PSIH
-      REAL(kind_phys), DIMENSION( ims:ime ), OPTIONAL,             &
-                            INTENT(INOUT)           ::        MOL, &
-                                                              ZOL, &
-                                                               LH, &
-                                                        CHS2,CQS2, &
+                                                             PSIH, &
                                                              USTM
 
       LOGICAL, DIMENSION( ims:ime ), INTENT(IN)    ::              &
@@ -660,10 +656,8 @@ CONTAINS
 !--------------------------------------------
 !JOE-additinal output
       REAL(kind_phys), DIMENSION( ims:ime ),                       &
-     &                      INTENT(OUT)            ::       qstar
-      REAL(kind_phys), DIMENSION( ims:ime ), OPTIONAL,             &
-     &                      INTENT(OUT)            ::       wstar
-
+     &                      INTENT(OUT)            ::       wstar, &
+     &                                                      qstar
 !JOE-end
 
 ! CCPP error handling

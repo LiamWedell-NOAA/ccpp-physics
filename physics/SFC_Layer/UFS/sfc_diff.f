@@ -62,7 +62,6 @@
      &                    flag_iter,redrag,                             &  !intent(in)
      &                    flag_lakefreeze,                              &  !intent(in)             
      &                    u10m,v10m,sfc_z0_type,                        &  !hafs,z0 type !intent(in)
-     &                    u1,v1,usfco,vsfco,icplocn2atm,                &  
      &                    wet,dry,icy,                                  &  !intent(in)
      &                    thsfc_loc,                                    &  !intent(in)
      &                    tskin_wat, tskin_lnd, tskin_ice,              &  !intent(in)
@@ -87,7 +86,6 @@
       integer, parameter  :: kp = kind_phys
       integer, intent(in) :: im, ivegsrc
       integer, intent(in) :: sfc_z0_type ! option for calculating surface roughness length over ocean
-      integer, intent(in) :: icplocn2atm ! option for including ocean current in the computation of flux
 
       integer, dimension(:), intent(in) :: vegtype
 
@@ -99,8 +97,6 @@
       logical, intent(in) :: thsfc_loc ! Flag for reference pressure in theta calculation
 
       real(kind=kind_phys), dimension(:), intent(in)    :: u10m,v10m
-      real(kind=kind_phys), dimension(:), intent(in)    :: u1,v1
-      real(kind=kind_phys), dimension(:), intent(in)    :: usfco,vsfco
       real(kind=kind_phys), intent(in) :: rvrdm1, eps, epsm1, grav
       real(kind=kind_phys), dimension(:), intent(in)    ::              &
      &                    ps,t1,q1,z1,garea,prsl1,prslki,prsik1,prslk1, &
@@ -131,7 +127,6 @@
 !     locals
 !
       integer   i
-      real(kind=kind_phys)  :: windrel
 !
       real(kind=kind_phys) :: rat, tv1, thv1, restar, wind10m,
      &                        czilc, tem1, tem2, virtfac
@@ -355,15 +350,9 @@
               tvs        = half * (tsurf_wat(i)+tskin_wat(i))/prsik1(i)
      &                          * virtfac
             endif
-
-            if (icplocn2atm == 0) then 
-              wind10m=sqrt(u10m(i)*u10m(i)+v10m(i)*v10m(i))
-              windrel=wind(i)
-            else if (icplocn2atm ==1) then
-              wind10m=sqrt((u10m(i)-usfco(i))**2+(v10m(i)-vsfco(i))**2)
-              windrel=sqrt((u1(i)-usfco(i))**2+(v1(i)-vsfco(i))**2) 
-            endif
-
+!
+            wind10m      = sqrt(u10m(i)*u10m(i)+v10m(i)*v10m(i))
+!
             if (sfc_z0_type == -1) then    ! using wave model derived momentum roughness
               tem1 = 0.11 * vis / ustar_wat(i)
               z0 = tem1 +  0.01_kp * z0rl_wav(i)
@@ -408,7 +397,7 @@
 !
             call stability
 !  ---  inputs:
-     &       (z1(i), zvfun(i), gdx, tv1, thv1, windrel,
+     &       (z1(i), zvfun(i), gdx, tv1, thv1, wind(i),
      &        z0max, ztmax_wat(i), tvs, grav, thsfc_loc,
 !  ---  outputs:
      &        rb_wat(i), fm_wat(i), fh_wat(i), fm10_wat(i), fh2_wat(i),

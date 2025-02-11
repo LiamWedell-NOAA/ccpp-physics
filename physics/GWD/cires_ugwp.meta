@@ -604,7 +604,6 @@
   type = real
   kind = kind_phys
   intent = out
-  optional = True
 [dvsfc_ms]
   standard_name = vertically_integrated_y_momentum_flux_due_to_mesoscale_orographic_gravity_wave_drag
   long_name = integrated y momentum flux from mesoscale gwd
@@ -613,7 +612,6 @@
   type = real
   kind = kind_phys
   intent = out
-  optional = True
 [dusfc_bl]
   standard_name = vertically_integrated_x_momentum_flux_due_to_blocking_drag
   long_name = integrated x momentum flux from blocking drag
@@ -622,7 +620,6 @@
   type = real
   kind = kind_phys
   intent = out
-  optional = True
 [dvsfc_bl]
   standard_name = vertically_integrated_y_momentum_flux_due_to_blocking_drag
   long_name = integrated y momentum flux from blocking drag
@@ -631,7 +628,6 @@
   type = real
   kind = kind_phys
   intent = out
-  optional = True
 [dudt_ogw]
   standard_name = tendency_of_x_wind_due_to_mesoscale_orographic_gravity_wave_drag
   long_name = instantaneous change in x wind due to orographic gw drag
@@ -640,7 +636,6 @@
   type = real
   kind = kind_phys
   intent = out
-  optional = True
 [dtauy2d_ms]
   standard_name = tendency_of_y_wind_due_to_mesoscale_orographic_gravity_wave_drag
   long_name = instantaneous change in y wind due to orographic gw drag
@@ -649,7 +644,6 @@
   type = real
   kind = kind_phys
   intent = out
-  optional = True
 [dtaux2d_bl]
   standard_name = tendency_of_x_wind_due_to_blocking_drag
   long_name = x wind tendency from blocking drag
@@ -658,7 +652,6 @@
   type = real
   kind = kind_phys
   intent = out
-  optional = True
 [dtauy2d_bl]
   standard_name = tendency_of_y_wind_due_to_blocking_drag
   long_name = y wind tendency from blocking drag
@@ -667,7 +660,6 @@
   type = real
   kind = kind_phys
   intent = out
-  optional = True
 [dudt_mtb]
   standard_name = instantaneous_change_in_x_wind_due_to_mountain_blocking_drag
   long_name = instantaneous change in x wind due to mountain blocking drag
@@ -692,7 +684,6 @@
   type = real
   kind = kind_phys
   intent = inout
-  optional = True
 [du3dt_ogw]
   standard_name = time_integral_of_change_in_x_wind_due_to_orographic_gravity_wave_drag
   long_name = time integral of change in x wind due to orographic gw drag
@@ -701,7 +692,6 @@
   type = real
   kind = kind_phys
   intent = inout
-  optional = True
 [du3dt_tms]
   standard_name = time_integral_of_change_in_x_wind_due_to_turbulent_orographic_form_drag
   long_name = time integral of change in x wind due to TOFD
@@ -710,7 +700,6 @@
   type = real
   kind = kind_phys
   intent = inout
-  optional = True
 [dudt]
   standard_name = process_split_cumulative_tendency_of_x_wind
   long_name = zonal wind tendency due to model physics
@@ -851,8 +840,8 @@
   dimensions = (horizontal_loop_extent,vertical_layer_dimension,cumulative_change_of_state_variables_outer_index_max)
   type = real
   kind = kind_phys
+  active = (flag_for_diagnostics_3D)
   intent = inout
-  optional = True
 [dtidx]
   standard_name = cumulative_change_of_state_variables_outer_index
   long_name = index of state-variable and process in last dimension of diagnostic tendencies array AKA cumulative_change_index

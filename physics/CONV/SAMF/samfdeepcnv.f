@@ -103,13 +103,12 @@
      &     progsigma,do_mynnedmf
       real(kind=kind_phys), intent(in) :: nthresh,betadcu,betamcu,      &
      &                                    betascu
-      real(kind=kind_phys), intent(in), optional :: ca_deep(:)
-      real(kind=kind_phys), intent(in), optional :: sigmain(:,:),       &
-     &     qmicro(:,:),  prevsq(:,:)
-      real(kind=kind_phys), intent(in) :: tmf(:,:,:),q(:,:)
-      real(kind=kind_phys), dimension (:), intent(in), optional :: maxMF
+      real(kind=kind_phys), intent(in) :: ca_deep(:)
+      real(kind=kind_phys), intent(in) :: sigmain(:,:),qmicro(:,:),     &
+     &     tmf(:,:,:),q(:,:), prevsq(:,:)
+      real(kind=kind_phys),    dimension (:), intent(in) :: maxMF
       real(kind=kind_phys), intent(out) :: rainevap(:)
-      real(kind=kind_phys), intent(out), optional :: sigmaout(:,:)
+      real(kind=kind_phys), intent(out) :: sigmaout(:,:)
       logical, intent(in)  :: do_ca,ca_closure,ca_entr,ca_trigger
       integer, intent(inout)  :: kcnv(:)
       ! DH* TODO - check dimensions of qtr, ntr+2 correct?  *DH
@@ -120,12 +119,12 @@
       integer, intent(out) :: kbot(:), ktop(:)
       real(kind=kind_phys), intent(out) :: cldwrk(:),                   &
      &   rn(:),                                                         &
-     &   dd_mf(:,:), dt_mf(:,:)
-      real(kind=kind_phys), intent(out), optional :: ud_mf(:,:)
+     &   ud_mf(:,:),dd_mf(:,:), dt_mf(:,:)
+      
       ! GJF* These variables are conditionally allocated depending on whether the
       !     Morrison-Gettelman microphysics is used, so they must be declared 
       !     using assumed shape.
-      real(kind=kind_phys), dimension(:,:), intent(inout), optional ::  &
+      real(kind=kind_phys), dimension(:,:), intent(inout) ::            &
      &   qlcn, qicn, w_upi, cnv_mfd, cnv_dqldt, clcn                    &
      &,  cnv_fice, cnv_ndrop, cnv_nice, cf_upi
       ! *GJF
@@ -215,8 +214,7 @@ cj
 !
 !  parameters for prognostic sigma closure                                                                                                                                                      
       real(kind=kind_phys) omega_u(im,km),zdqca(im,km),tmfq(im,km),
-     &     omegac(im),zeta(im,km),dbyo1(im,km),sigmab(im),qadv(im,km),
-     &     sigmaoutx(im)
+     &     omegac(im),zeta(im,km),dbyo1(im,km),sigmab(im),qadv(im,km)
       real(kind=kind_phys) gravinv,invdelt,sigmind,sigminm,sigmins
       parameter(sigmind=0.01,sigmins=0.03,sigminm=0.01)
       logical flag_shallow, flag_mid
@@ -3424,28 +3422,17 @@ c
         endif
       enddo
 c
-!
-      if(progsigma)then
-         do i = 1, im
-            sigmaoutx(i)=max(sigmaout(i,1),0.0)
-            sigmaoutx(i)=min(sigmaoutx(i),1.0)
-         enddo
-      endif
+c  convective cloud water
 c
 !> - Calculate convective cloud water.
       do k = 1, km
-         do i = 1, im
-            if (cnvflg(i) .and. rn(i) > 0.) then
-               if (k >= kbcon(i) .and. k < ktcon(i)) then
-                  cnvw(i,k) = cnvwt(i,k) * xmb(i) * dt2
-                  if(progsigma)then
-                     cnvw(i,k) = cnvw(i,k) * sigmaoutx(i)
-                  else
-                     cnvw(i,k) = cnvw(i,k) * sigmagfm(i)
-                  endif
-               endif
+        do i = 1, im
+          if (cnvflg(i) .and. rn(i) > 0.) then
+            if (k >= kbcon(i) .and. k < ktcon(i)) then
+              cnvw(i,k) = cnvwt(i,k) * xmb(i) * dt2
             endif
-         enddo
+          endif
+        enddo
       enddo
 c
 c  convective cloud cover
