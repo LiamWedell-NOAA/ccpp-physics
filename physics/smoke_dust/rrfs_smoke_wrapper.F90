@@ -14,7 +14,7 @@
                                      p_qv, p_atm_shum, p_atm_cldq,plume_wind_eff,       &
                                      p_smoke, p_dust_1, p_coarse_pm, epsilc,            &
                                      n_dbg_lines, add_fire_moist_flux, plume_alpha,     &
-                                     sc_factor
+                                     hwp_alpha
    use dust_data_mod,         only : dust_alpha, dust_gamma, dust_moist_opt,            &
                                      dust_moist_correction, dust_drylimit_factor
    use seas_mod,              only : gocart_seasalt_driver
@@ -48,7 +48,7 @@ contains
                               plume_wind_eff_in,add_fire_heat_flux_in,            & ! smoke namelist
                               addsmoke_flag_in, ebb_dcycle_in, hwp_method_in,     & ! smoke namelist
                               add_fire_moist_flux_in,                             & ! smoke namelist
-                              sc_factor_in, plume_alpha_in,                       & ! smoke namelist 
+                              hwp_alpha_in, plume_alpha_in,                       & ! smoke namelist
                               dust_opt_in, dust_alpha_in, dust_gamma_in,          & ! dust namelist
                               dust_moist_opt_in,                                  & ! dust namelist
                               dust_moist_correction_in, dust_drylimit_factor_in,  & ! dust namelist                        
@@ -60,7 +60,7 @@ contains
   real(kind_phys), intent(in) :: dust_alpha_in, dust_gamma_in, wetdep_ls_alpha_in, plume_alpha_in
   real(kind_phys), intent(in) :: dust_moist_correction_in
   real(kind_phys), intent(in) :: dust_drylimit_factor_in
-  real(kind_phys), intent(in) :: sc_factor_in
+  real(kind_phys), intent(in) :: hwp_alpha_in
   integer,         intent(in) :: dust_opt_in,dust_moist_opt_in, wetdep_ls_opt_in, pm_settling_in, seas_opt_in
   integer,         intent(in) :: drydep_opt_in
   logical,         intent(in) :: aero_ind_fdb_in,dbg_opt_in, extended_sd_diags_in, add_fire_heat_flux_in, add_fire_moist_flux_in
@@ -99,7 +99,7 @@ contains
      add_fire_heat_flux    = add_fire_heat_flux_in
      add_fire_moist_flux   = add_fire_moist_flux_in  
      plume_alpha           = plume_alpha_in 
-     sc_factor             = sc_factor_in
+     hwp_alpha             = hwp_alpha_in
   !>-Feedback
      aero_ind_fdb          = aero_ind_fdb_in
   !>-Other
@@ -120,7 +120,7 @@ contains
                    nsoil, smc, tslb, vegtype_dom, vegtype_frac, soiltyp, nlcat,            &
                    dswsfc, zorl, snow, julian,recmol,                                      &
                    idat, rain_cpl, rainc_cpl, hf2d, g, pi, con_cp, con_rd, con_fv,         &
-                   dust12m_in, emi_ant_in, smoke_RRFS, smoke2d_RRFS,                       &
+                   dust12m_in, emi_ant_in, smoke_RRFS, smoke2d_RRFS, smokem6_RRFS,         &   !JR added method 6
                    ntrac, qgrs, gq0, chem3d, tile_num,                                     &
                    ntsmoke, ntdust, ntcoarsepm, imp_physics, imp_physics_thompson,         &
                    nwfa, nifa, emanoc, emdust, emseas, drydep_flux_out, wetdpr,            &
@@ -147,6 +147,9 @@ contains
     real(kind_phys), dimension(:,:,:), intent(in)    :: dust12m_in
     real(kind_phys), dimension(:,:,:), intent(in)    :: smoke_RRFS
     real(kind_phys), dimension(:,:),   intent(in)    :: smoke2d_RRFS
+    !JR statrst added method 6
+    real(kind_phys), dimension(:,:,:),   intent(in)    :: smokem6_RRFS
+    !JR ends
     real(kind_phys), dimension(:,:),   intent(in)    :: emi_ant_in
     real(kind_phys), dimension(:),     intent(in)    :: u10m, v10m, ustar, dswsfc,         &
                            recmol, garea, rlat,rlon, tskin, pb2d, zorl, snow,              &
@@ -203,7 +206,7 @@ contains
     ! -- buffers
     real(kind_phys), dimension(ims:im, jms:jme )  :: coef_bb_dc, flam_frac, frp_in,           &
                                           fire_hist, peak_hr, lu_nofire, lu_qfire, lu_sfire,  &
-                                                     ebu_in, fire_end_hr, hwp_day_avg,        &
+                                                     ebu_in, fire_end_hr, hwp_day_avg, hwp_prev_day,       &
                                                      uspdavg2d, hpbl2d, totprcp_24hrs
     integer,         dimension(ims:im, jms:jme )  :: min_fplume2, max_fplume2, fire_type,  &
                                                      kpbl,kpbl_thetav
@@ -313,7 +316,7 @@ contains
         pr3d,ph3d,phl3d,tk3d,prl3d,us3d,vs3d,spechum,w,                 &
         nsoil,smc,tslb,vegtype_dom,soiltyp,                             &
         nlcat,vegtype_frac,dswsfc,zorl,                                 &
-        snow,dust12m_in,emi_ant_in,smoke_RRFS,smoke2d_RRFS,coef_bb_dc,  &
+        snow,dust12m_in,emi_ant_in,smoke_RRFS,smoke2d_RRFS,coef_bb_dc,  smokem6_RRFS,  & !JR added method 6
         hf2d, pb2d, g, pi, hour_int, peak_hr,uspdavg2d,                 &
         u10,v10,ust,tsk,xland,xlat,xlong,dxy,                           &
         rri,t_phy,u_phy,v_phy,p_phy,pi_phy,wind_phy,theta_phy,          &
@@ -322,14 +325,14 @@ contains
         ntrac,gq0,totprcp,                                              &
         num_chem,num_moist,                                             &
         ntsmoke, ntdust,ntcoarsepm,                                     &
-        moist,chem,ebu_in,kpbl_thetav,ebb_smoke_in,                     &
-        fire_hist,frp_in, hwp_day_avg, totprcp_24hrs, fire_end_hr,      &
+        moist,chem,ebu_in,kpbl_thetav,ebb_smoke_in,fire_hist,           &
+        frp_in,hwp_day_avg,hwp_prev_day,totprcp_24hrs,fire_end_hr,      &
         emis_anoc,smois,stemp,ivgtyp,isltyp,vegfrac,rmol,swdown,znt,    &
-        hfx,pbl,snowh,clayf,rdrag,sandf,ssm,uthr,oro, hwp_local,        &
-        t2m,dpt2m,wetness,kpbl,                                         &
+        hfx,pbl,snowh,clayf,rdrag,sandf,ssm,uthr,oro,                   &
+        hwp_local,t2m,dpt2m,wetness,kpbl,                               &
         ids,ide, jds,jde, kds,kde,                                      &
         ims,ime, jms,jme, kms,kme,                                      &
-        its,ite, jts,jte, kts,kte                                       )
+        its,ite, jts,jte, kts,kte,mpiid                                       )
 
     IF (ktau==1) THEN
       ebu = 0.
@@ -430,7 +433,7 @@ contains
         do j=jts,jte
         do i=its,ite
          IF ( fire_type(i,j) .eq. 4 ) THEN ! only apply scaling factor to wildfires
-            frp_inst(i,j) = MIN(sc_factor*frp_in(i,j)*coef_bb_dc(i,j),frp_max)
+            frp_inst(i,j) = MIN(hwp_alpha*frp_in(i,j)*coef_bb_dc(i,j),frp_max)
          ELSE
             frp_inst(i,j) = MIN(frp_in(i,j)*coef_bb_dc(i,j),frp_max)
          ENDIF
@@ -460,9 +463,9 @@ contains
                        chem,julday,gmt,xlat,xlong,                   &
                        fire_end_hr, peak_hr,curr_secs,               &
                        coef_bb_dc,fire_hist,hwp_local,hwp_day_avg,   &
-                       swdown,ebb_dcycle,ebu_in,ebu,fire_type,       &
-                       moist(:,:,:,p_qv), add_fire_moist_flux,       &
-                       sc_factor,                                    &    
+                       hwp_prev_day,swdown,ebb_dcycle,ebu_in,        &
+                       ebu,fire_type,moist(:,:,:,p_qv),              &
+                       add_fire_moist_flux,hwp_alpha,                &
                        ids,ide, jds,jde, kds,kde,                    &
                        ims,ime, jms,jme, kms,kme,                    &
                        its,ite, jts,jte, kts,kte , mpiid             )
@@ -642,7 +645,7 @@ contains
         u10m,v10m,ustar,land,garea,rlat,rlon,ts2d,                         &
         pr3d,ph3d,phl3d,tk3d,prl3d,us3d,vs3d,spechum,w,                    &
         nsoil,smc,tslb,vegtype_dom,soiltyp,nlcat,vegtype_frac,dswsfc,zorl, &
-        snow_cpl,dust12m_in,emi_ant_in,smoke_RRFS,smoke2d_RRFS,coef_bb_dc, &
+        snow_cpl,dust12m_in,emi_ant_in,smoke_RRFS,smoke2d_RRFS,coef_bb_dc,  smokem6_RRFS, &  !JR added
         hf2d, pb2d, g, pi, hour_int, peak_hr,uspdavg2d,                    &
         u10,v10,ust,tsk,xland,xlat,xlong,dxy,                              &
         rri,t_phy,u_phy,v_phy,p_phy,pi_phy,wind_phy,theta_phy,             &
@@ -651,14 +654,14 @@ contains
         ntrac,gq0,totprcp,                                                 &
         num_chem, num_moist,                                               &
         ntsmoke, ntdust, ntcoarsepm,                                       &
-        moist,chem,ebu_in,kpbl_thetav,ebb_smoke_in,                        &
-        fire_hist,frp_in, hwp_day_avg, totprcp_24hrs, fire_end_hr,         &
+        moist,chem,ebu_in,kpbl_thetav,ebb_smoke_in,fire_hist,              &
+        frp_in,hwp_day_avg,hwp_prev_day,totprcp_24hrs,fire_end_hr,         &
         emis_anoc,smois,stemp,ivgtyp,isltyp,vegfrac,rmol,swdown,           &
         znt,hfx,pbl,snowh,clayf,rdrag,sandf,ssm,uthr,oro,hwp_local,        &
         t2m,dpt2m,wetness,kpbl,                                            &
         ids,ide, jds,jde, kds,kde,                                         &
         ims,ime, jms,jme, kms,kme,                                         &
-        its,ite, jts,jte, kts,kte)
+        its,ite, jts,jte, kts,kte,mpiid)
 
     !Chem input configuration
     integer, intent(in) :: current_month, current_hour, hour_int, nlcat
@@ -676,6 +679,9 @@ contains
     real(kind=kind_phys), dimension(ims:ime, nsoil),   intent(in) :: smc,tslb
     real(kind=kind_phys), dimension(ims:ime, 12, 5),   intent(in) :: dust12m_in
     real(kind=kind_phys), dimension(ims:ime, 24, 2),   intent(in) :: smoke_RRFS
+    !JR starts added method 6
+    real(kind=kind_phys), dimension(ims:ime, 4, 5),   intent(in) :: smokem6_RRFS
+    ! JR ends
 ! This is a place holder for ebb_dcycle == 2, currently set to hold a single
 ! value, which is the previous day's average of hwp, frp, ebb, fire_end
     real(kind=kind_phys), dimension(ims:ime,     5),   intent(in) :: smoke2d_RRFS
@@ -710,13 +716,13 @@ contains
     real(kind_phys), dimension(ims:ime, kms:kme, jms:jme), intent(out) :: z_at_w
     real(kind_phys), dimension(ims:ime, nsoil, jms:jme), intent(out) :: smois,stemp
     real(kind_phys), dimension(ims:ime,jms:jme), intent(inout) :: frp_in, fire_end_hr, fire_hist, coef_bb_dc
-    real(kind_phys), dimension(ims:ime,jms:jme), intent(inout) :: hwp_day_avg, totprcp_24hrs, peak_hr
+    real(kind_phys), dimension(ims:ime,jms:jme), intent(inout) :: hwp_day_avg, hwp_prev_day, totprcp_24hrs, peak_hr
     real(kind_phys), dimension(ims:ime), intent(inout) :: emis_anoc,ebb_smoke_in
     real(kind_phys), parameter :: conv_frp = 1.e+06_kind_phys  ! FRP conversion factor, MW to W
     real(kind_phys), parameter :: frpc  = 1._kind_phys         ! FRP conversion factor (Regional)
 
     ! -- local variables
-    integer i,ip,j,k,k1,kp,kk,kkp,nv,l,ll,n,nl
+    integer i,ip,j,k,k1,kp,kk,kkp,nv,l,ll,n,nl,hour_tmp
     real(kind_phys) :: SFCWIND,SFCWIND2,WIND,DELWIND,DZ,wdgust,snoweq,THETA
     real(kind_phys), dimension(ims:ime, kms:kme, jms:jme) :: THETAV
     real(kind_phys), dimension(ims:ime, jms:jme) :: windgustpot
@@ -725,13 +731,15 @@ contains
     real(kind=kind_phys),parameter :: p1000mb = 100000.
     real(kind_phys) :: precip_factor
 
+    integer :: mpiid
+
     ! -- initialize fire emissions
     ebu_in         = 0._kind_phys
     ebb_smoke_in   = 0._kind_phys
     emis_anoc      = 0._kind_phys
     frp_in         = 0._kind_phys
-    hwp_day_avg    = 0._kind_phys
     totprcp_24hrs  = 0._kind_phys
+    hwp_prev_day   = 0._kind_phys
     fire_end_hr    = 0._kind_phys
     uspdavg2d      = 0._kind_phys
 
@@ -932,6 +940,12 @@ contains
        SFCWIND          = sqrt(u10m(i)**2+v10m(i)**2)
        windgustpot(i,1) = SFCWIND
        uspdavg2d(i,1) = SFCWIND
+
+        ! SRB - Adding safeguard for kpbl for first timestep
+        if (ktau==1) then
+           kpbl(i,1) = kpbl_thetav(i,1)
+        endif
+
        if (kpbl(i,1)+1 .ge. kts+1 ) then
           do k=kts+1,kpbl(i,1)+1   ! Use kpbl from MYNN
              WIND = sqrt(us3d(i,k)**2+vs3d(i,k)**2)
@@ -1006,17 +1020,40 @@ contains
     endif
     ! Here we need to initialize various arrays in order to apply HWP to diurnal cycle
     ! if ebb_dcycle/=2 then those arrays=0, we need to read in temporal 
+    !JR starts added method 6, use hour_int / 6 + 1 to determine the 6-hour interval directly
     if (ebb_dcycle == 2) then
       do i=its, ite
-       do j=jts, jte 
-         ebu_in        (i,j) = smoke2d_RRFS(i,1)!/86400.
-         frp_in        (i,j) = smoke2d_RRFS(i,2)*conv_frp
-         fire_end_hr   (i,j) = smoke2d_RRFS(i,3)
-         hwp_day_avg   (i,j) = smoke2d_RRFS(i,4)
-         ebb_smoke_in  (i  ) = ebu_in(i,j)
-       enddo
+        do j=jts, jte
+          if (hwp_alpha == 0.0) then
+            ebu_in        (i,j) = smoke2d_RRFS(i,1)!/86400.
+            frp_in        (i,j) = smoke2d_RRFS(i,2)*conv_frp
+            fire_end_hr   (i,j) = smoke2d_RRFS(i,3)
+            hwp_day_avg   (i,j) = smoke2d_RRFS(i,4)
+            hwp_prev_day  (i,j) = smoke2d_RRFS(i,4)
+            ebb_smoke_in  (i  ) = ebu_in(i,j)
+          else
+            if (hour_int .le. 24) then
+              hour_tmp = hour_int
+            elseif (hour_int .le. 48) then
+              hour_tmp = hour_int - 24
+            else
+              hour_tmp = hour_int - 48
+            end if
+            ebu_in        (i,j) = smokem6_RRFS(i,floor(hour_tmp / 6.0) + 1,1)!/86400.
+            frp_in        (i,j) = smokem6_RRFS(i,floor(hour_tmp / 6.0) + 1,2)!*conv_frp
+            fire_end_hr   (i,j) = smokem6_RRFS(i,floor(hour_tmp / 6.0) + 1,3)
+            hwp_prev_day  (i,j) = smokem6_RRFS(i,floor(hour_tmp / 6.0) + 1,4)
+            ebb_smoke_in   (i  ) = ebu_in(i,j)
+            hwp_day_avg(i,j) = SUM(smokem6_RRFS(i,:,4)) / MAX(1, COUNT(smokem6_RRFS(i,:,4)/=0))
+            if (frp_in(i,j) > 10.) then
+              WRITE(1000+mpiid,*) 'xlat, xlong, ebu_in, frp_in, ebu_m6, frp_m6: ',xlat(i,j),xlong(i,j),ebu_in(i,j),frp_in(i,j),smokem6_RRFS(i,floor(hour_tmp / 6.0) + 1,1),smokem6_RRFS(i,floor(hour_tmp / 6.0) + 1,2)
+            endif
+          endif
+        enddo
       enddo
     end if
+    !JR ends
+
 
     if (ktau==1) then
      do j=jts,jte
