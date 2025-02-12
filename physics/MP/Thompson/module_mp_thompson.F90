@@ -61,6 +61,8 @@ module module_mp_thompson
 
    use machine, only: wp => kind_phys, sp => kind_sngl_prec, dp => kind_dbl_prec
    use module_mp_radar
+   use dep_data_mod, only : fact_wfa, fact_ifa, rhosmoke, rhodust
+   use rrfs_smoke_config, only : aero_ind_fdb, p_smoke, p_dust_1, p_coarse_pm
 
 #ifdef MPI
    use mpi
@@ -71,6 +73,7 @@ module module_mp_thompson
    logical, parameter, private :: iiwarm = .false.
    logical, private :: is_aerosol_aware = .false.
    logical, private :: merra2_aerosol_aware = .false.
+   logical, private :: do_wetrm_thmp = .false.
    logical, parameter, private :: dustyIce = .true.
    logical, parameter, private :: homogIce = .true.
 
@@ -439,6 +442,8 @@ module module_mp_thompson
 !> @{
       subroutine thompson_init(is_aerosol_aware_in,       &
                                merra2_aerosol_aware_in,   &
+                               do_wetrm_thmp_in,          &
+                               aero_ind_fdb_in,           &
                                mpicomm, mpirank, mpiroot, &
                                threads, errmsg, errflg)
 
@@ -446,6 +451,8 @@ module module_mp_thompson
 
          logical, intent(in) :: is_aerosol_aware_in
          logical, intent(in) :: merra2_aerosol_aware_in
+         logical, intent(in) :: do_wetrm_thmp_in
+         logical, intent(in) :: aero_ind_fdb_in
          integer, intent(in) :: mpicomm, mpirank, mpiroot
          integer, intent(In) :: threads
          character(len=*), intent(inout) :: errmsg
@@ -475,9 +482,17 @@ module module_mp_thompson
 ! Set module variable is_aerosol_aware/merra2_aerosol_aware
          is_aerosol_aware = is_aerosol_aware_in
          merra2_aerosol_aware = merra2_aerosol_aware_in
+         do_wetrm_thmp = do_wetrm_thmp_in
+         aero_ind_fdb = aero_ind_fdb_in
          if (is_aerosol_aware .and. merra2_aerosol_aware) then
             errmsg = 'Logic error in thompson_init: only one of the two options can be true, ' // &
                      'not both: is_aerosol_aware or merra2_aerosol_aware'
+            errflg = 1
+            return
+         end if
+         if ( .not. is_aerosol_aware .and. do_wetrm_thmp ) then
+            errmsg = 'Logic error in thompson_init: wet removal of aerosols can ' // &
+                     'only be performed if: is_aerosol_aware = .true. '
             errflg = 1
             return
          end if
@@ -996,6 +1011,7 @@ module module_mp_thompson
 !> @{
       subroutine mp_gt_driver(qv, qc, qr, qi, qs, qg, ni, nr, nc,     &
                               nwfa, nifa, nwfa2d, nifa2d,             &
+                              ndvel, chem3d, wetdpr_flux,             &
                               tt, th, pii,                            &
                               p, w, dz, dt_in, dt_inner,              &
                               sedi_semi, decfl, lsm,                  &
@@ -1053,6 +1069,11 @@ module module_mp_thompson
                            pii
          real(wp), dimension(ims:ime, kms:kme, jms:jme), optional, intent(inout):: &
                            nc, nwfa, nifa
+         integer, intent(in) :: ndvel
+         real(wp), dimension(ims:ime, kms:kme, jms:jme, 1:ndvel), optional, intent(inout):: &
+                          chem3d
+         real(wp), dimension(ims:ime, 3 ), optional, intent(inout) :: &
+              wetdpr_flux
          real(wp), dimension(ims:ime, jms:jme), optional, intent(in):: nwfa2d, nifa2d
          integer, dimension(ims:ime, jms:jme), intent(in):: lsm
          real(wp), dimension(ims:ime, kms:kme, jms:jme), optional, intent(inout):: &
@@ -1134,12 +1155,15 @@ module module_mp_thompson
       real(wp), dimension(kts:kte):: &
                         rainprod1d, evapprod1d
 #endif
+         real(wp), dimension(kts:kte,1:ndvel) :: nchem1d, chem1d_before
+         real(wp), dimension(1:ndvel) :: kappa, densa
+         integer, dimension(1:ndvel) :: chem_pointers
          real(wp), dimension(its:ite, jts:jte):: pcp_ra, pcp_sn, pcp_gr, pcp_ic
          real(wp) :: dt, pptrain, pptsnow, pptgraul, pptice
          real(wp) :: qc_max, qr_max, qs_max, qi_max, qg_max, ni_max, nr_max
          integer:: lsml
          real(wp) :: rand1, rand2, rand3, rand_pert_max
-         integer:: i, j, k, m
+         integer:: i, j, k, m, nv
          integer:: imax_qc,imax_qr,imax_qi,imax_qs,imax_qg,imax_ni,imax_nr
          integer:: jmax_qc,jmax_qr,jmax_qi,jmax_qs,jmax_qg,jmax_ni,jmax_nr
          integer:: kmax_qc,kmax_qr,kmax_qi,kmax_qs,kmax_qg,kmax_ni,kmax_nr
@@ -1152,6 +1176,19 @@ module module_mp_thompson
          ! CCPP error handling
          character(len=*), optional, intent(  out) :: errmsg
          integer,          optional, intent(  out) :: errflg
+
+         ! Assign chemistry pointers and densities
+         chem_pointers(1) = p_smoke
+         chem_pointers(2) = p_dust_1
+         chem_pointers(3) = p_coarse_pm
+         densa(:) = 1.E3
+         densa(1) = rhosmoke
+         densa(2) = rhodust
+         densa(3) = rhodust
+         kappa(:) = 1.0
+         !kappa(1) = 0.2
+         !kappa(2) = 0.04
+         !kappa(3) = 0.04
 
          ! CCPP
          if (present(errmsg)) errmsg = ''
@@ -1205,6 +1242,15 @@ module module_mp_thompson
                      (present(nwfa) .or. present(nifa) .or. present(nwfa2d) .or. present(nifa2d))) then
                write(*,*) 'WARNING, nc/nwfa/nifa/nwfa2d/nifa2d present but is_aerosol_aware/merra2_aerosol_aware are FALSE'
             end if
+            if ( do_wetrm_thmp .and. .not. (present(chem3d) .and. &
+                                            present(wetdpr_flux))) then
+                  write(*,'(*(a))') 'Logic error in mp_thompson_run:',  &
+                                             ' aerosol-aware microphysics with wet removal ', &
+                                             ' requires the following optional arguments: ',  &
+                                             ' chem3d, wetdpr_flux'
+                  errflg = 1
+                  return
+            endif
          end if test_only_once
 
       ! These must be alwyas allocated
@@ -1478,6 +1524,17 @@ module module_mp_thompson
                      nc1d(k) = nc(i,k,j)
                      nwfa1d(k) = nwfa(i,k,j)
                      nifa1d(k) = nifa(i,k,j)
+                     if (is_aerosol_aware .and. do_wetrm_thmp) then
+                        do nv = 1, ndvel
+                           if (chem_pointers(nv) .eq. p_smoke ) then
+                              nchem1d(k,nv) = chem3d(i,k,j,nv) / densa(nv) * kappa(nv) * fact_wfa
+                           else if ( chem_pointers(nv) .eq. p_dust_1 &
+                                            .or. chem_pointers(nv) .eq. p_coarse_pm ) then
+                              nchem1d(k,nv) = chem3d(i,k,j,nv) / densa(nv) * kappa(nv) * fact_ifa
+                           endif
+                           chem1d_before(k,nv) = chem3d(i,k,j,nv)
+                        enddo
+                     endif
                   enddo
                else
                   do k = kts, kte
@@ -1493,7 +1550,8 @@ module module_mp_thompson
 
 !> - Call mp_thompson()
                call mp_thompson(qv1d, qc1d, qi1d, qr1d, qs1d, qg1d, ni1d,     &
-                           nr1d, nc1d, nwfa1d, nifa1d, t1d, p1d, w1d, dz1d,  &
+                           nr1d, nc1d, nwfa1d, nifa1d, ndvel, chem_pointers, nchem1d, &
+                           t1d, p1d, w1d, dz1d,  &
                            lsml, pptrain, pptsnow, pptgraul, pptice, &
 #if ( WRF_CHEM == 1 )
                      rainprod1d, evapprod1d, &
@@ -1556,10 +1614,31 @@ module module_mp_thompson
                   nifa1d(kts) = nifa1d(kts) + nifa2d(i,j)*dt
                   end if
 
-                  do k = kts, kte
+                  do k = kts, kte 
                      nc(i,k,j) = nc1d(k)
                      nwfa(i,k,j) = nwfa1d(k)
                      nifa(i,k,j) = nifa1d(k)
+                     if (do_wetrm_thmp) then
+                        do nv=1,ndvel
+                           if ( chem_pointers(nv) .eq. p_smoke ) then
+                              chem3d(i,k,j,nv) = max(1.E-12, nchem1d(k,nv) * densa(nv) / kappa(nv) / fact_wfa )
+                           elseif ( chem_pointers(nv) .eq. p_dust_1 .or. chem_pointers(nv) .eq. p_coarse_pm ) then
+                              chem3d(i,k,j,nv) = max(1.E-12, nchem1d(k,nv) * densa(nv) / kappa(nv) / fact_ifa )
+                           endif
+                           if ( k .lt. kte ) then
+                           if (chem_pointers(nv) .eq. p_smoke) then
+                              wetdpr_flux(i,1) = wetdpr_flux(i,1) + &
+                                               (chem1d_before(k,nv) - chem3d(i,k,j,nv)) * 100 * (p1d(k)-p1d(k+1))/(dt*9.81)
+                           else if (chem_pointers(nv) .eq. p_dust_1) then
+                              wetdpr_flux(i,2) = wetdpr_flux(i,2) + &
+                                               (chem1d_before(k,nv) - chem3d(i,k,j,nv)) * 100 * (p1d(k)-p1d(k+1))/(dt*9.81)
+                           else if (chem_pointers(nv) .eq. p_coarse_pm ) then
+                              wetdpr_flux(i,3) = wetdpr_flux(i,3) + &
+                                               (chem1d_before(k,nv) - chem3d(i,k,j,nv)) * 100 * (p1d(k)-p1d(k+1))/(dt*9.81)
+                           endif
+                           endif
+                        enddo
+                     endif
                   enddo
                endif
 
@@ -1910,7 +1989,8 @@ module module_mp_thompson
 !>\section gen_mp_thompson  mp_thompson General Algorithm
 !> @{
    subroutine mp_thompson (qv1d, qc1d, qi1d, qr1d, qs1d, qg1d, ni1d,     &
-                        nr1d, nc1d, nwfa1d, nifa1d, t1d, p1d, w1d, dzq,  &
+                        nr1d, nc1d, nwfa1d, nifa1d, ndvel, chem_pointers, nchem1d, &
+                        t1d, p1d, w1d, dzq,  &
                         lsml, pptrain, pptsnow, pptgraul, pptice,        &
 #if ( WRF_CHEM == 1 )
                         rainprod, evapprod,                              &
@@ -1942,10 +2022,12 @@ module module_mp_thompson
       implicit none
 
 !..Sub arguments
-      integer, intent(in):: kts, kte, ii, jj
+      integer, intent(in):: kts, kte, ii, jj, ndvel
       real(wp), dimension(kts:kte), intent(inout) :: &
                           qv1d, qc1d, qi1d, qr1d, qs1d, qg1d, ni1d, &
                           nr1d, nc1d, nwfa1d, nifa1d, t1d
+      integer, dimension(1:ndvel) :: chem_pointers
+      real(wp), dimension(kts:kte,1:ndvel), intent(inout) :: nchem1d
       real(wp), dimension(kts:kte), intent(out) :: pfil1, pfll1
       real(wp), dimension(kts:kte), intent(in) :: p1d, w1d, dzq
       real(wp), intent(inout) :: pptrain, pptsnow, pptgraul, pptice
@@ -1981,6 +2063,8 @@ module module_mp_thompson
       real(wp), dimension(kts:kte) :: tten, qvten, qcten, qiten, &
            qrten, qsten, qgten, niten, nrten, ncten, nwfaten, nifaten
 
+      real(wp), dimension(kts:kte,1:ndvel) :: nchemten, aeroFF
+
       real(dp), dimension(kts:kte) :: prw_vcd
 
       real(dp), dimension(kts:kte) :: pnc_wcd, pnc_wau, pnc_rcw, &
@@ -1988,6 +2072,11 @@ module module_mp_thompson
 
       real(dp), dimension(kts:kte) :: pna_rca, pna_sca, pna_gca, &
            pnd_rcd, pnd_scd, pnd_gcd
+
+     ! Seperate arrays for prognostic aerosols
+      real(dp), DIMENSION(kts:kte,1:ndvel):: pna_rca_prog, pna_sca_prog, &
+           pna_gca_prog,pnd_rcd_prog,pnd_scd_prog,pnd_gcd_prog,          &
+           pni_iha_prog,pri_iha_prog,pnc_wcd_prog,pni_inu_prog
 
       real(dp), dimension(kts:kte) :: prr_wau, prr_rcw, prr_rcs, &
            prr_rcg, prr_sml, prr_gml, &
@@ -2017,6 +2106,8 @@ module module_mp_thompson
       real(wp), dimension(kts:kte) :: temp, pres, qv, pfll, pfil, pdummy
       real(wp), dimension(kts:kte) :: rc, ri, rr, rs, rg, ni, nr, nc, nwfa, nifa
       real(wp), dimension(kts:kte) :: rr_tmp, nr_tmp, rg_tmp
+     ! Seperate arrays for prognostic aerosols
+      real(wp), DIMENSION(kts:kte,1:ndvel):: nchem_wfa, nchem_ifa
       real(wp), dimension(kts:kte) :: rho, rhof, rhof2
       real(wp), dimension(kts:kte) :: qvs, qvsi, delQvs
       real(wp), dimension(kts:kte) :: satw, sati, ssatw, ssati
@@ -2053,9 +2144,9 @@ module module_mp_thompson
       real(wp) :: Ef_rw, Ef_sw, Ef_gw, Ef_rr
       real(wp) :: Ef_ra, Ef_sa, Ef_ga
       real(wp) :: dtsave, odts, odt, odzq, hgt_agl, SR
-      real(wp) :: xslw1, ygra1, zans1, eva_factor
+      real(wp) :: xslw1, ygra1, zans1, eva_factor, ifasum
       real(wp) av_i
-      integer :: i, k, k2, n, nn, nstep, k_0, kbot, IT, iexfrq
+      integer :: i, k, k2, n, nn, nstep, k_0, kbot, IT, iexfrq, nv
       integer, dimension(5) :: ksed1
       integer :: nir, nis, nig, nii, nic, niin
       integer :: idx_tc, idx_t, idx_s, idx_g1, idx_g, idx_r1, idx_r,     &
@@ -2110,6 +2201,13 @@ module module_mp_thompson
          ncten(k) = 0.
          nwfaten(k) = 0.
          nifaten(k) = 0.
+         if ( do_wetrm_thmp ) then
+            do nv = 1, ndvel
+               nchemten(k,nv) = 0.
+               nchem_wfa(k,nv)= 0.
+               nchem_ifa(k,nv)= 0.
+            enddo
+         endif
 
          prw_vcd(k) = 0.
 
@@ -2178,6 +2276,23 @@ module module_mp_thompson
          pnd_rcd(k) = 0.
          pnd_scd(k) = 0.
          pnd_gcd(k) = 0.
+         if ( do_wetrm_thmp ) then
+            do nv = 1, ndvel
+               pna_rca_prog(k,nv) = 0.
+               pna_sca_prog(k,nv) = 0.
+               pna_gca_prog(k,nv) = 0.
+
+               pnd_rcd_prog(k,nv) = 0.
+               pnd_scd_prog(k,nv) = 0.
+               pnd_gcd_prog(k,nv) = 0.
+
+               pni_iha_prog(k,nv) = 0.
+               pri_iha_prog(k,nv) = 0.
+               pnc_wcd_prog(k,nv) = 0.
+
+               pni_inu_prog(k,nv) = 0.
+            enddo
+         endif
 
          pfil1(k) = 0.
          pfll1(k) = 0.
@@ -2260,6 +2375,32 @@ module module_mp_thompson
          rho(k) = RoverRv*pres(k) / (R*temp(k)*(qv(k)+RoverRv))
          nwfa(k) = max(11.1E6*rho(k), min(9999.E6*rho(k), nwfa1d(k)*rho(k)))
          nifa(k) = max(naIN1*0.01*rho(k), min(9999.E6*rho(k), nifa1d(k)*rho(k)))
+         if ( do_wetrm_thmp ) then
+           do nv = 1, ndvel
+              if (chem_pointers(nv) .eq. p_smoke ) then
+                 ! nchem_wfa = # / m3
+                 ! nchem1d   = # / kg
+                 nchem_wfa(k,nv) = nchem1d(k,nv)*rho(k) ! MAX(11.1E6*rho(k),MIN(9999.E6*rho(k), nchem1d(k,nv)*rho(k)))
+                 aeroFF(k,nv) = 100. ! smoke is the only wfa
+              endif
+              if (chem_pointers(nv) .eq. p_dust_1 .or. chem_pointers(nv) .eq. p_coarse_pm ) then
+                 nchem_ifa(k,nv) = nchem1d(k,nv)*rho(k) !MAX(naIN1*0.01*rho(k), MIN(9999.E6*rho(k), nchem1d(k,nv)*rho(k))) 
+              endif
+           enddo
+          ifasum = 0.0
+          do nv = 1, ndvel
+             ifasum = ifasum + nchem_ifa(k,nv)
+          enddo
+          do nv = 1, ndvel
+          if (chem_pointers(nv) .eq. p_dust_1 .or. chem_pointers(nv) .eq. p_coarse_pm ) then 
+          if ( nchem1d(k,nv) .ge. 1.e-15 ) then
+              aeroFF(k,nv) = ifasum / nchem1d(k,nv)
+          else
+              aeroFF(k,nv) = 100.
+          endif
+          endif
+          enddo
+         endif
          mvd_r(k) = D0r
          mvd_c(k) = D0c
 
@@ -2603,6 +2744,31 @@ module module_mp_thompson
                            *((lamr+fv_r)**(-cre(9)))
             pnd_rcd(k) = min(real(nifa(k)*odts, kind=dp), pnd_rcd(k))
          endif
+
+!>  - Rain collecting **prognostic** aerosols, wet scavenging
+        if (L_qr(k) .and. mvd_r(k).gt. D0r .and. do_wetrm_thmp ) then
+          lamr = 1./ilamr(k)
+          do nv = 1, ndvel
+             if (chem_pointers(nv) .eq. p_smoke) then
+                Ef_ra = Eff_aero(mvd_r(k),0.04E-6,visco(k),rho(k),temp(k),'r')
+                pna_rca_prog(k,nv) = rhof(k)*t1_qr_qc*Ef_ra*nchem_wfa(k,nv)*N0_r(k)  &
+                                     *((lamr+fv_r)**(-cre(9)))
+                pna_rca_prog(k,nv) = MIN(real(nchem_wfa(k,nv)*odts,kind=dp), pna_rca_prog(k,nv))
+             endif
+             if (chem_pointers(nv) .eq. p_dust_1 ) then
+                Ef_ra = Eff_aero(mvd_r(k),1.0E-6,visco(k),rho(k),temp(k),'r')
+                pnd_rcd_prog(k,nv) = rhof(k)*t1_qr_qc*Ef_ra*nchem_ifa(k,nv)*N0_r(k)           &
+                                  *((lamr+fv_r)**(-cre(9)))
+                pnd_rcd_prog(k,nv) = MIN(real(nchem_ifa(k,nv)*odts,kind=dp), pnd_rcd_prog(k,nv))
+             endif
+             if ( chem_pointers(nv) .eq. p_coarse_pm ) then
+                Ef_ra = Eff_aero(mvd_r(k),4.5E-6,visco(k),rho(k),temp(k),'r')
+                pnd_rcd_prog(k,nv) = rhof(k)*t1_qr_qc*Ef_ra*nchem_ifa(k,nv)*N0_r(k)           &
+                                  *((lamr+fv_r)**(-cre(9)))
+                pnd_rcd_prog(k,nv) = MIN(real(nchem_ifa(k,nv)*odts,kind=dp), pnd_rcd_prog(k,nv))
+             endif
+          enddo
+        endif
       
       enddo
 
@@ -2804,6 +2970,49 @@ module module_mp_thompson
                pnd_gcd(k) = min(real(nifa(k)*odts, kind=dp), pnd_gcd(k))
             endif
 
+          do nv = 1, ndvel
+             if (rs(k) .gt. r_s(1) .and. do_wetrm_thmp) then
+              if (chem_pointers(nv) .eq. p_smoke) then
+                Ef_sa = Eff_aero(xDs,0.04E-6,visco(k),rho(k),temp(k),'s')
+                pna_sca_prog(k,nv) = rhof(k)*t1_qs_qc*Ef_sa*nchem_wfa(k,nv)*smoe(k)
+                pna_sca_prog(k,nv) = MIN(real(nchem_wfa(k,nv)*odts,kind=dp), pna_sca_prog(k,nv))
+              endif
+              if (chem_pointers(nv) .eq. p_dust_1 ) then
+                Ef_sa = Eff_aero(xDs,1.0E-6,visco(k),rho(k),temp(k),'s')
+                pnd_scd_prog(k,nv) = rhof(k)*t1_qs_qc*Ef_sa*nchem_ifa(k,nv)*smoe(k)
+                pnd_scd_prog(k,nv) = MIN(real(nchem_ifa(k,nv)*odts,kind=dp), pnd_scd_prog(k,nv))
+              endif
+              if (chem_pointers(nv) .eq. p_coarse_pm ) then
+                Ef_sa = Eff_aero(xDs,4.5E-6,visco(k),rho(k),temp(k),'s')
+                pnd_scd_prog(k,nv) = rhof(k)*t1_qs_qc*Ef_sa*nchem_ifa(k,nv)*smoe(k)
+                pnd_scd_prog(k,nv) = MIN(real(nchem_ifa(k,nv)*odts,kind=dp), pnd_scd_prog(k,nv))
+              endif
+             endif
+
+             if (rg(k) .gt. r_g(1) .and. do_wetrm_thmp) then
+              xDg = (bm_g + mu_g + 1.) * ilamg(k)
+              if (chem_pointers(nv) .eq. p_smoke) then
+                 Ef_ga = Eff_aero(xDg,0.04E-6,visco(k),rho(k),temp(k),'g')
+                 pna_gca_prog(k,nv) = rhof(k)*t1_qg_qc*Ef_ga*nchem_wfa(k,nv)*N0_g(k) &
+                               *ilamg(k)**cge(9)
+                 pna_gca_prog(k,nv) = MIN(real(nchem_wfa(k,nv)*odts,kind=dp), pna_gca_prog(k,nv))
+              endif
+              if (chem_pointers(nv) .eq. p_dust_1 ) then
+                 Ef_ga = Eff_aero(xDg,1.0E-6,visco(k),rho(k),temp(k),'g')
+                 pnd_gcd_prog(k,nv) = rhof(k)*t1_qg_qc*Ef_ga*nchem_ifa(k,nv)*N0_g(k) &
+                               *ilamg(k)**cge(9)
+                 pnd_gcd_prog(k,nv) = MIN(real(nchem_ifa(k,nv)*odts,kind=dp), pnd_gcd_prog(k,nv))
+              endif
+              if ( chem_pointers(nv) .eq. p_coarse_pm ) then
+                 Ef_ga = Eff_aero(xDg,4.5E-6,visco(k),rho(k),temp(k),'g')
+                 pnd_gcd_prog(k,nv) = rhof(k)*t1_qg_qc*Ef_ga*nchem_ifa(k,nv)*N0_g(k) &
+                               *ilamg(k)**cge(9)
+                 pnd_gcd_prog(k,nv) = MIN(real(nchem_ifa(k,nv)*odts,kind=dp), pnd_gcd_prog(k,nv))
+              endif
+             endif
+          enddo
+
+
 !>  - Rain collecting snow.  Cannot assume Wisner (1972) approximation
 !! or Mizuno (1990) approach so we solve the CE explicitly and store
 !! results in lookup table.
@@ -2992,6 +3201,16 @@ module module_mp_thompson
                   pni_iha(k) = xnc*odts
                   pri_iha(k) = min(real(rate_max, kind=dp), xm0i*0.1*pni_iha(k))
                   pni_iha(k) = pri_iha(k)/(xm0i*0.1)
+                  if ( do_wetrm_thmp ) then
+                     do nv = 1, ndvel
+                        if ( chem_pointers(nv) .eq. p_smoke ) then
+                           xnc = iceKoop(temp(k),qv(k),qvs(k),nchem_wfa(k,nv), dtsave)
+                           pni_iha_prog(k,nv) = xnc*odts
+                           pri_iha_prog(k,nv) = min(real(rate_max, kind=dp), xm0i*0.1*pni_iha_prog(k,nv))
+                           pni_iha_prog(k,nv) = pri_iha_prog(k,nv)/(xm0i*0.1)
+                        endif
+                     enddo
+                  endif
                endif
 !+---+------------------ END NEW ICE NUCLEATION -----------------------+
 
@@ -3243,6 +3462,19 @@ module module_mp_thompson
                        + pna_gca(k) + pni_iha(k)) * orho
             nifaten(k) = nifaten(k) - (pnd_rcd(k) + pnd_scd(k)          &
                        + pnd_gcd(k)) * orho
+            if (do_wetrm_thmp) then ! JLS
+               do nv = 1, ndvel
+                  if (chem_pointers(nv) .eq. p_smoke ) then
+                  nchemten(k,nv) = nchemten(k,nv) - aeroFF(k,nv) * (pna_rca_prog(k,nv)    + &
+                                   pna_sca_prog(k,nv) + pna_gca_prog(k,nv) + &
+                                   pni_iha_prog(k,nv)) * orho
+                  endif
+                  if (chem_pointers(nv) .eq.  p_dust_1 .or. chem_pointers(nv) .eq. p_coarse_pm ) then
+                  nchemten(k,nv) = nchemten(k,nv) - aeroFF(k,nv) * (pnd_rcd_prog(k,nv)      + &
+                                   pnd_scd_prog(k,nv) + pnd_gcd_prog(k,nv)) * orho
+                  endif
+               enddo
+            endif
             if (dustyIce) then
                nifaten(k) = nifaten(k) - pni_inu(k)*orho
             else
@@ -3431,6 +3663,13 @@ module module_mp_thompson
          lvt2(k)=lvap(k)*lvap(k)*ocp(k)*oRv*otemp*otemp
          if (is_aerosol_aware)                                                 &
            nwfa(k) = max(11.1E6*rho(k), (nwfa1d(k) + nwfaten(k)*DT)*rho(k))
+         if ( do_wetrm_thmp ) then
+            do nv = 1, ndvel
+               if ( chem_pointers(nv) .eq. p_smoke ) then
+                  nchem_wfa(k,nv) = (nchem1d(k,nv) + nchemten(k,nv)*DT)*rho(k)
+               endif
+            enddo
+         endif
       enddo
 
       do k = kts, kte
@@ -3611,7 +3850,14 @@ module module_mp_thompson
                      endif
                   endif
                   pnc_wcd(k) = 0.5*(xnc-nc(k) + abs(xnc-nc(k)))*odts*orho
-
+                  if ( do_wetrm_thmp .and. aero_ind_fdb ) then
+                     do nv = 1, ndvel
+                        if ( chem_pointers(nv) .eq. p_smoke ) then
+                            xnc = max(2., activ_ncloud(temp(k),w1d(k)+rand3, nchem_wfa(k,nv),lsml))
+                            pnc_wcd_prog(k,nv) = 0.5*(xnc-nc(k) + abs(xnc-nc(k)))*odts*orho
+                        endif
+                     enddo
+                  endif
    !+---+-----------------------------------------------------------------+ !  EVAPORATION
                elseif (clap .lt. -eps .AND. ssatw(k).lt.-1.E-6 .AND.     &
                         (is_aerosol_aware .or. merra2_aerosol_aware)) then  
@@ -3659,20 +3905,50 @@ module module_mp_thompson
                   prw_vcd(k) = max(real(-rc(k)*0.99*orho*odt, kind=dp), prw_vcd(k))
                   pnc_wcd(k) = max(real(-nc(k)*0.99*orho*odt, kind=dp),                &
                            -tnc_wev(idx_d, idx_c, idx_n)*orho*odt)
+                  if ( do_wetrm_thmp .and. aero_ind_fdb ) then
+                     do nv = 1, ndvel
+                        if ( chem_pointers(nv) .eq. p_smoke ) then
+                           pnc_wcd_prog(k,nv) = max(real(-nc(k)*0.99*orho*odt, kind=dp),                &
+                              -tnc_wev(idx_d, idx_c, idx_n)*orho*odt)
+                        endif
+                     enddo
+                  endif
 
                endif
             else
                prw_vcd(k) = -rc(k)*orho*odt
                pnc_wcd(k) = -nc(k)*orho*odt
+               if ( do_wetrm_thmp .and. aero_ind_fdb ) then
+                  do nv = 1, ndvel
+                      if ( chem_pointers(nv) .eq. p_smoke ) then
+                         pnc_wcd_prog(k,nv) = -nc(k)*orho*odt
+                      endif
+                  enddo
+               endif
             endif
 
 !+---+-----------------------------------------------------------------+
 
             qvten(k) = qvten(k) - prw_vcd(k)
             qcten(k) = qcten(k) + prw_vcd(k)
-            ncten(k) = ncten(k) + pnc_wcd(k)
+            if ( do_wetrm_thmp .and. aero_ind_fdb ) then
+               do nv = 1, ndvel
+               if ( chem_pointers(nv) .eq. p_smoke ) then
+               ncten(k) = ncten(k) + pnc_wcd_prog(k,nv)
+               endif
+               enddo
+            else
+               ncten(k) = ncten(k) + pnc_wcd(k)
+            endif
             if (is_aerosol_aware)                                            &   
                nwfaten(k) = nwfaten(k) - pnc_wcd(k)
+            if ( do_wetrm_thmp .and. aero_ind_fdb ) then
+               do nv = 1, ndvel
+                  if (chem_pointers(nv) .eq. p_smoke ) then
+                     nchemten(k,nv) = nchemten(k,nv) - pnc_wcd_prog(k,nv)
+                  endif
+               enddo
+            endif
             tten(k) = tten(k) + lvap(k)*ocp(k)*prw_vcd(k)*(1-IFDRY)
             rc(k) = max(R1, (qc1d(k) + DT*qcten(k))*rho(k))
             if (rc(k).eq.R1) L_qc(k) = .false.
@@ -3763,6 +4039,13 @@ module module_mp_thompson
             nrten(k) = nrten(k) - pnr_rev(k)
             if (is_aerosol_aware)                                            &
                nwfaten(k) = nwfaten(k) + pnr_rev(k)
+            if ( do_wetrm_thmp ) then
+               do nv = 1, ndvel
+                  if ( chem_pointers(nv) .eq. p_smoke ) then
+                     nchemten(k,nv) = nchemten(k,nv) + pnr_rev(k)*(nchem1d(k,nv)/sum(nchem1d(k,:)))
+                  endif
+               enddo
+            endif
             tten(k) = tten(k) - lvap(k)*ocp(k)*prv_rev(k)*(1-IFDRY)
 
             rr(k) = max(R1, (qr1d(k) + DT*qrten(k))*rho(k))
@@ -4259,6 +4542,16 @@ module module_mp_thompson
                            (nwfa1d(k)+nwfaten(k)*DT)))
             nifa1d(k) = max(naIN1*0.01, min(9999.E6,                       &
                            (nifa1d(k)+nifaten(k)*DT)))
+            if (do_wetrm_thmp) then
+              do nv = 1, ndvel
+               if (chem_pointers(nv) .eq. p_smoke ) then
+                  nchem1d(k,nv) = nchem1d(k,nv)+nchemten(k,nv)*DT ! MAX(11.1E6,MIN(9999.E6,(nchem1d(k,nv)+nchemten(k,nv)*DT)))
+               endif
+               if (chem_pointers(nv) .eq. p_dust_1 .or. chem_pointers(nv) .eq. p_coarse_pm) then
+                  nchem1d(k,nv) = nchem1d(k,nv)+nchemten(k,nv)*DT !MAX(naIN1*0.01,MIN(9999.E6,(nchem1d(k,nv)+nchemten(k,nv)*DT)))
+               endif
+              enddo
+            endif
          end if
          if (qc1d(k) .le. R1) then
             qc1d(k) = 0.0
@@ -5184,20 +5477,24 @@ module module_mp_thompson
    real function Eff_aero(D, Da, visc,rhoa,Temp,species)
 
       implicit none
-      real:: D, Da, visc, rhoa, Temp
-      character(LEN=1):: species
-      real:: aval, Cc, diff, Re, Sc, St, St2, vt, Eff
+      real(wp), intent(in)  :: D, Da, visc, rhoa, Temp
+      character(LEN=1), intent(in) :: species
+      real:: aval, Cc, diff, Re, Sc, St, St2, vt, Eff, rho_p
       real(wp), parameter:: boltzman = 1.3806503E-23
       real(wp), parameter:: meanPath = 0.0256E-6
 
       vt = 1.
+      rho_p = rho_w
       if (species .eq. 'r') then
          vt = -0.1021 + 4.932E3*D - 0.9551E6*D*D                        &
               + 0.07934E9*D*D*D - 0.002362E12*D*D*D*D
+         rho_p = rho_w
       elseif (species .eq. 's') then
          vt = av_s*D**bv_s
+         rho_p = rho_s
       elseif (species .eq. 'g') then
          vt = av_g*D**bv_g
+         rho_p = rho_g
       endif
 
       Cc    = 1. + 2.*meanPath/Da *(1.257+0.4*exp(-0.55*Da/meanPath))
@@ -5206,8 +5503,8 @@ module module_mp_thompson
       Re    = 0.5*rhoa*D*vt/visc
       Sc    = visc/(rhoa*diff)
 
-      St    = Da*Da*vt*1000./(9.*visc*D)
-      aval  = 1.+LOG(1.+Re)
+      St    = (rho_p - rhoa)*Da*Da*vt*CC/(9.*visc*D)
+      aval  = LOG(1.+Re)
       St2   = (1.2 + 1./12.*aval)/(1.+aval)
 
       Eff = 4./(Re*Sc) * (1. + 0.4*SQRT(Re)*Sc**0.3333                  &

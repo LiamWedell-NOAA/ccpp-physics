@@ -513,7 +513,7 @@ contains
 
 !>- large-scale wet deposition
     if (wetdep_ls_opt == 1) then
-       call  wetdep_ls(dt,chem,rnav,moist,                       &
+       call  wetdep_ls(dt,chem,rnav,moist,p_phy,                 &
                      rho_phy,num_chem,num_moist,ndvel, dz8w,vvel,&
                      wetdpr_smoke_local, wetdpr_dust_local,      &
                      wetdpr_coarsepm_local,                      &
