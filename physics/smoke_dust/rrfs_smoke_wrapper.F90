@@ -432,11 +432,7 @@ contains
         ! Apply the diurnal cycle coefficient to frp_inst ()
         do j=jts,jte
         do i=its,ite
-         IF ( fire_type(i,j) .eq. 4 ) THEN ! only apply scaling factor to wildfires
-            frp_inst(i,j) = MIN(hwp_alpha*frp_in(i,j)*coef_bb_dc(i,j),frp_max)
-         ELSE
-            frp_inst(i,j) = MIN(frp_in(i,j)*coef_bb_dc(i,j),frp_max)
-         ENDIF
+          frp_inst(i,j) = MIN(frp_in(i,j)*coef_bb_dc(i,j),frp_max)
         enddo
         enddo
 
