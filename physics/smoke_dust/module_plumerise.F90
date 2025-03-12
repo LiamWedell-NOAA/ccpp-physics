@@ -20,10 +20,10 @@ subroutine ebu_driver (      flam_frac,ebu_in,ebu,                   &
                              wind_phy,                               &   ! SRB: added wind_phy
                              z_at_w,z,g,con_cp,con_rd,               &   ! scale_fire_emiss is part of config_flags
                              frp_inst, k_min, k_max,                 &   ! RAR:
-                             wind_eff_opt,                           &
+                             wind_eff_opt, wmax,                     &
                              kpbl_thetav, kpbl,                      &   ! SRB: added kpbl_thetav and kpbl
                              curr_secs,xlat, xlong , uspdavg2d,      &
-                             hpbl2d,  mpiid, alpha,                  &
+                             hpbl2d,  mpiid, alpha, beta,            &
                              frp_min, frp_wthreshold,zpbl_lim,uspd_lim,   &
                              ids,ide, jds,jde, kds,kde,              &
                              ims,ime, jms,jme, kms,kme,              &
@@ -51,7 +51,7 @@ subroutine ebu_driver (      flam_frac,ebu_in,ebu,                   &
                                   its,ite, jts,jte, kts,kte
    real(kind_phys) :: curr_secs
    INTEGER,      INTENT(IN   ) :: wind_eff_opt
-   REAL(kind_phys), INTENT(IN)    :: alpha !  SRB: Enrainment constant for plumerise scheme
+   REAL(kind_phys), INTENT(IN)    :: alpha, beta !  SRB: Enrainment constant for plumerise scheme
    real(kind=kind_phys), DIMENSION( ims:ime, kms:kme, jms:jme ), INTENT(INOUT ) ::  ebu
    real(kind=kind_phys), INTENT(IN )  :: g, con_cp, con_rd
    real(kind=kind_phys), DIMENSION( ims:ime, jms:jme ), INTENT(IN )  :: ebu_in
@@ -63,6 +63,7 @@ subroutine ebu_driver (      flam_frac,ebu_in,ebu,                   &
       INTEGER :: nv, i, j, k,  kp1, kp2
       INTEGER :: icall
       INTEGER, DIMENSION(ims:ime, jms:jme), INTENT (OUT) :: k_min, k_max      ! Min and max ver. levels for BB injection spread
+      REAL, DIMENSION(ims:ime, jms:jme), INTENT (OUT) :: wmax ! SRB : Adding wmax from plumerise to output
       REAL, DIMENSION(ims:ime, jms:jme), INTENT (IN) :: uspdavg2d, hpbl2d ! SRB
       real(kind_phys), dimension (kte) :: u_in ,v_in ,w_in ,theta_in ,pi_in, rho_phyin ,qv_in ,zmid, z_lev, uspd ! SRB
       real(kind=kind_phys) :: dz_plume, cpor, con_rocp ! SRB
@@ -93,7 +94,6 @@ subroutine ebu_driver (      flam_frac,ebu_in,ebu,                   &
             enddo
           enddo
        !enddo
-
 ! RAR: new FRP based approach
 ! Haiqin: do_plumerise is added to the namelist options
 check_pl:  IF (do_plumerise) THEN    ! if the namelist option is set for plumerise
@@ -127,7 +127,7 @@ check_pl:  IF (do_plumerise) THEN    ! if the namelist option is set for plumeri
                               k_max(i,j), dbg_opt, g, con_cp,       &
                               con_rd, cpor, errmsg, errflg,         &
                               icall, mpiid, xlat(i,j), xlong(i,j),  & 
-                              curr_secs, alpha, frp_min )
+                              curr_secs, alpha, beta, frp_min, wmax(i,j))
                if(errflg/=0) return
 
                kp1= k_min(i,j)
@@ -163,8 +163,8 @@ check_pl:  IF (do_plumerise) THEN    ! if the namelist option is set for plumeri
                ebu(i,kts+1,j)= (1.-flam_frac(i,j))*0.53* ebu_in(i,j) ! dz=18.7, 21.2 first two levels
 
                ! For output diagnostic
-               k_min(i,j) = kp1
-               k_max(i,j) = kp2
+               k_min(i,j) = CEILING(z_lev(kp1)) !kp1
+               k_max(i,j) = CEILING(z_lev(kp2)) !kp2
 
                IF ( dbg_opt .and. (icall .le. n_dbg_lines)  .and. (frp_inst(i,j) .ge. frp_min) ) then
                    WRITE(1000+mpiid,*) 'mod_plumerise_after:xlat,xlong,curr_secs,k_min(i,j), k_max(i,j) ',xlat(i,j),xlong(i,j),int(curr_secs),kp1,kp2

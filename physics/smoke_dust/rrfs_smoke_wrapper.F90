@@ -14,7 +14,7 @@
                                      p_qv, p_atm_shum, p_atm_cldq,plume_wind_eff,       &
                                      p_smoke, p_dust_1, p_coarse_pm, epsilc,            &
                                      n_dbg_lines, add_fire_moist_flux, plume_alpha,     &
-                                     hwp_alpha
+                                     plume_beta, plume_beta_qv, hwp_alpha
    use dust_data_mod,         only : dust_alpha, dust_gamma, dust_moist_opt,            &
                                      dust_moist_correction, dust_drylimit_factor
    use seas_mod,              only : gocart_seasalt_driver
@@ -48,7 +48,8 @@ contains
                               plume_wind_eff_in,add_fire_heat_flux_in,            & ! smoke namelist
                               addsmoke_flag_in, ebb_dcycle_in, hwp_method_in,     & ! smoke namelist
                               add_fire_moist_flux_in,                             & ! smoke namelist
-                              hwp_alpha_in, plume_alpha_in,                       & ! smoke namelist
+                              hwp_alpha_in, plume_alpha_in, plume_beta_in,        & ! smoke namelist 
+                              plume_beta_qv_in,                                   & ! smoke namelist
                               dust_opt_in, dust_alpha_in, dust_gamma_in,          & ! dust namelist
                               dust_moist_opt_in,                                  & ! dust namelist
                               dust_moist_correction_in, dust_drylimit_factor_in,  & ! dust namelist                        
@@ -57,7 +58,7 @@ contains
                               errmsg, errflg, n_dbg_lines_in                      )
                           
 !>-- Namelist
-  real(kind_phys), intent(in) :: dust_alpha_in, dust_gamma_in, wetdep_ls_alpha_in, plume_alpha_in
+  real(kind_phys), intent(in) :: dust_alpha_in, dust_gamma_in, wetdep_ls_alpha_in, plume_alpha_in, plume_beta_in, plume_beta_qv_in
   real(kind_phys), intent(in) :: dust_moist_correction_in
   real(kind_phys), intent(in) :: dust_drylimit_factor_in
   real(kind_phys), intent(in) :: hwp_alpha_in
@@ -99,6 +100,8 @@ contains
      add_fire_heat_flux    = add_fire_heat_flux_in
      add_fire_moist_flux   = add_fire_moist_flux_in  
      plume_alpha           = plume_alpha_in 
+     plume_beta            = plume_beta_in
+     plume_beta_qv         = plume_beta_qv_in
      hwp_alpha             = hwp_alpha_in
   !>-Feedback
      aero_ind_fdb          = aero_ind_fdb_in
@@ -126,7 +129,7 @@ contains
                    nwfa, nifa, emanoc, emdust, emseas, drydep_flux_out, wetdpr,            &
                    ebb_smoke_in, frp_output, coef_bb, fire_type_out,                       &
                    ebu_smoke,fhist,min_fplume,                                             &
-                   max_fplume, hwp, hwp_ave, wetness, ndvel, ddvel_inout,                  &
+                   max_fplume, wmax_plume, hwp, hwp_ave, wetness, ndvel, ddvel_inout,      &
                    peak_hr_out,lu_nofire_out,lu_qfire_out,                                 &
                    fire_heat_flux_out, frac_grid_burned_out,oro,totprcp,                   &
                    uspdavg, hpbl_thetav, rho_dry,                                          & 
@@ -164,7 +167,7 @@ contains
     real(kind_phys), dimension(:,:),   intent(inout) :: ebu_smoke
     real(kind_phys), dimension(:,:),   intent(inout) :: rho_dry
     real(kind_phys), dimension(:),     intent(out  ) :: fire_heat_flux_out, frac_grid_burned_out
-    real(kind_phys), dimension(:),     intent(inout) :: max_fplume, min_fplume, uspdavg, hpbl_thetav
+    real(kind_phys), dimension(:),     intent(inout) :: max_fplume, min_fplume, wmax_plume, uspdavg, hpbl_thetav
     real(kind_phys), dimension(:),     intent(inout) :: hwp, peak_hr_out
     real(kind_phys), dimension(:),     intent(inout) :: hwp_ave
     real(kind_phys), dimension(:,:),   intent(inout) :: nwfa, nifa
@@ -210,6 +213,8 @@ contains
                                                      uspdavg2d, hpbl2d, totprcp_24hrs
     integer,         dimension(ims:im, jms:jme )  :: min_fplume2, max_fplume2, fire_type,  &
                                                      kpbl,kpbl_thetav
+    real,            dimension(ims:im, jms:jme)   :: wmax2
+ 
     logical :: call_plume, reset_hwp_ave, avg_hwp_ave
 !>- optical variables
     real(kind_phys), dimension(ims:im, jms:jme, ndvel) :: ddvel, settling_flux, drydep_flux_local
@@ -262,6 +267,7 @@ contains
 
     min_fplume2 = 0
     max_fplume2 = 0
+    wmax2       = 0.
     uspdavg2d   = 0.
     hpbl2d      = 0.
     emis_seas   = 0.
@@ -419,8 +425,12 @@ contains
      !WRITE(1000+mpiid,*) 'Entered add_fire_heat_flux at timestep:',ktau
      do i = its,ite
        if ( coef_bb_dc(i,1)*frp_in(i,1) .ge. 1.E7 ) then
-          fire_heat_flux_out(i) = min(max(0.,0.88*coef_bb_dc(i,1)*frp_in(i,1) / &
-                                  0.55/dxy(i,1)) ,5000.) ! W m-2 [0 - 10,000]
+               if ( coef_bb_dc(i,1)*frp_in(i,1) .ge. 1.E9 .and. fire_type(i,1) .eq. 4 ) then 
+                       !SRB: Apply plume_beta only for wildfires and when frp is higher than 1000MW
+                 fire_heat_flux_out(i) = min(max(0.,plume_beta*coef_bb_dc(i,1)*frp_in(i,1) /dxy(i,1)) ,5000.) ! W m-2 [0 - 10,000]
+               else
+                 fire_heat_flux_out(i) = min(max(0.,coef_bb_dc(i,1)*frp_in(i,1) /dxy(i,1)) ,5000.) ! W m-2 [0 - 10,000]
+               endif
           frac_grid_burned_out(i) = min(max(0., 1.3*0.0006*coef_bb_dc(i,1)*frp_in(i,1)/dxy(i,1) ),1.)
        else
           fire_heat_flux_out(i)   = 0.0
@@ -442,10 +452,10 @@ contains
                    rho_phy,vvel,u_phy,v_phy,pi_phy,wind_phy,           &
                    z_at_w,zmid,g,con_cp,con_rd,                        &
                    frp_inst, min_fplume2, max_fplume2,                 &
-                   plume_wind_eff,                                     &
+                   plume_wind_eff, wmax2,                              &
                    kpbl_thetav,kpbl,curr_secs,                         &
                    xlat, xlong, uspdavg2d, hpbl2d, mpiid,plume_alpha,  &
-                   frp_min, frp_wthreshold,                            &
+                   plume_beta, frp_min, frp_wthreshold,                &
                    zpbl_threshold, uspd_threshold,                     &
                    ids,ide, jds,jde, kds,kde,                          &
                    ims,ime, jms,jme, kms,kme,                          &
@@ -461,7 +471,7 @@ contains
                        coef_bb_dc,fire_hist,hwp_local,hwp_day_avg,   &
                        hwp_prev_day,swdown,ebb_dcycle,ebu_in,        &
                        ebu,fire_type,moist(:,:,:,p_qv),              &
-                       add_fire_moist_flux,hwp_alpha,                &
+                       add_fire_moist_flux,plume_beta_qv,hwp_alpha,  &
                        ids,ide, jds,jde, kds,kde,                    &
                        ims,ime, jms,jme, kms,kme,                    &
                        its,ite, jts,jte, kts,kte , mpiid             )
@@ -600,6 +610,7 @@ contains
      fhist      (i) = fire_hist (i,1)
      min_fplume (i) = real(min_fplume2(i,1))
      max_fplume (i) = real(max_fplume2(i,1))
+     wmax_plume (i) = real(wmax2(i,1))
      fire_type_out(i)=fire_type(i,1)
      lu_nofire_out(i)=lu_nofire(i,1)
      lu_qfire_out (i)=lu_qfire(i,1)
@@ -1015,7 +1026,7 @@ contains
       endif
     endif
     ! Here we need to initialize various arrays in order to apply HWP to diurnal cycle
-    ! if ebb_dcycle/=2 then those arrays=0, we need to read in temporal 
+    ! if ebb_dcycle/=2 then those arrays=0, we need to read in temporal
     !JR starts added method 6, use hour_int / 6 + 1 to determine the 6-hour interval directly
     if (ebb_dcycle == 2) then
       do i=its, ite

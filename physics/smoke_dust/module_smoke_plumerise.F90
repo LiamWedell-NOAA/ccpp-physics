@@ -14,13 +14,14 @@ module module_smoke_plumerise
                          wind_eff_opt,                              &
                          frp_inst,k1,k2, dbg_opt, g, cp, rgas,      &
                          cpor,  errmsg, errflg, icall, mpiid,       &
-                         lat, long, curr_secs, alpha, frp_min  )
+                         lat, long, curr_secs, alpha, beta,         & 
+                         frp_min, w2) ! SRB: Getting plumerise variable out
 
   implicit none
 
   LOGICAL, INTENT (IN) :: dbg_opt
   INTEGER, INTENT (IN) :: wind_eff_opt, mpiid
-  real(kind_phys),  INTENT(IN) ::  lat,long, curr_secs, alpha ! SRB
+  real(kind_phys),  INTENT(IN) ::  lat,long, curr_secs, alpha, beta ! SRB
 
   REAL(kind_phys), INTENT(IN) :: frp_min 
 
@@ -31,6 +32,7 @@ module module_smoke_plumerise
   integer :: ng,m1,m2,m3,ia,iz,ja,jz,ibcon,mynum,i,j,k,imm,ixx,ispc !,nspecies
 
   INTEGER, INTENT (OUT) :: k1,k2
+  REAL, INTENT(OUT) :: w2  ! SRB: Added wmax to output
   character(*), intent(inout) :: errmsg
   integer, intent(inout) :: errflg
 
@@ -39,9 +41,9 @@ module module_smoke_plumerise
   real(kind=kind_phys),    dimension(m1,m2,m3) :: up, vp, wp,theta,pp,dn0,rv 
   real(kind=kind_phys),    dimension(m1)       :: zt_rams,zm_rams
   real(kind=kind_phys)                         :: burnt_area,dzi,FRP   ! RAR:
-  real(kind=kind_phys),    dimension(2)        :: ztopmax
+  real(kind=kind_phys),    dimension(2)        :: ztopmax, wmax
   real(kind=kind_phys)                         :: q_smold_kgm2
- 
+  
   INTEGER ::  wind_eff
   INTEGER, INTENT(IN) :: icall
   type(plumegen_coms), pointer :: coms
@@ -107,11 +109,11 @@ module module_smoke_plumerise
        END IF
 
        !- get fire properties (burned area, plume radius, heating rates ...)
-       call get_fire_properties(coms,imm,burnt_area,frp_inst,errmsg,errflg)
+       call get_fire_properties(coms,imm,burnt_area,frp_inst,beta,errmsg,errflg)
        if(errflg/=0) return
 
        !------  generates the plume rise    ------
-       call makeplume (coms,kmt,ztopmax(imm),ixx,imm,mpiid, alpha)
+       call makeplume (coms,kmt,ztopmax(imm),ixx,imm,mpiid, alpha,wmax(imm))
 
        IF ( dbg_opt .and.  (icall .le. n_dbg_lines) .and. (frp_inst .ge. frp_min) ) then
             WRITE(1000+mpiid,*) 'inside plumerise after makeplume:xlat,xlong,curr_secs,imm,kmt,ztopmax(imm) ', lat, long, int(curr_secs), imm,kmt, ztopmax(imm)
@@ -120,7 +122,7 @@ module module_smoke_plumerise
     enddo lp_minmax
 
         !- define o dominio vertical onde a emissao flaming ira ser colocada
-        call set_flam_vert(ztopmax,k1,k2,nkp,coms%zzcon)     !,W_VMD,VMD)
+        call set_flam_vert(ztopmax,k1,k2,nkp,coms%zzcon,w2,wmax)     !,W_VMD,VMD)
 
 end subroutine plumerise
 !-------------------------------------------------------------------------
@@ -148,10 +150,10 @@ if(.not.coms%initialized) then
                 ! coms%zm(k) =  dynamical levels 
 endif
 
-znz=coms%zcon(k2)
+znz=coms%zcon(k2)  ! SRB: this is model z at plumerise top
 errflg=1
 do k=nkp,1,-1
-  if(coms%zt(k).lt.znz) then
+  if(coms%zt(k).lt.znz) then !SRB: Get k on plume grid for max_fplume
     errflg=0
     exit
   endif
@@ -161,7 +163,7 @@ if(errflg/=0) then
   return
 endif
 !-srf-mb
-kmt=min(k,nkp-1)
+kmt=min(k,nkp-1) ! SRB:max_fplume level in plume grid
 
 nk=k2-k1+1
 !call htint(nk, coms%wcon,coms%zzcon,kmt,wpe,coms%zt,errmsg,errflg)
@@ -246,14 +248,16 @@ return
 end subroutine set_grid
 !-------------------------------------------------------------------------
 
-  SUBROUTINE set_flam_vert(ztopmax,k1,k2,nkp,zzcon) !,W_VMD,VMD)
+  SUBROUTINE set_flam_vert(ztopmax,k1,k2,nkp,zzcon,w2,wmax) !,W_VMD,VMD)
 
     REAL(kind=kind_phys)    , INTENT(IN)  :: ztopmax(2)
     INTEGER , INTENT(OUT) :: k1,k2
-
+    REAL, INTENT(OUT) :: w2
+    REAL(kind=kind_phys)    , INTENT(IN)  :: wmax(2)
+    
     ! plumegen_coms
     INTEGER , INTENT(IN)  :: nkp
-    REAL(kind=kind_phys)    , INTENT(IN)  :: zzcon(nkp)
+    REAL(kind=kind_phys)    , INTENT(IN)  :: zzcon(nkp) !SRB: This might be wrong
 
     INTEGER imm,k
     INTEGER, DIMENSION(2)  :: k_lim
@@ -268,13 +272,18 @@ end subroutine set_grid
     DO imm=1,2
        ! checar 
        !    do k=1,m1-1
-       DO k=1,nkp-1
+       DO k=1,nkp-1  !SRB: This might be k=1,kte-1
           IF(zzcon(k) > ztopmax(imm)) EXIT
        ENDDO
        k_lim(imm) = k
     ENDDO
-    k1= MIN(MAX(4,k_lim(1)),51)
-    k2= MIN(51,k_lim(2))   ! RAR: the model doesn't simulate very high injection heights, so it's safe to assume maximum heigh of 12km AGL for HRRR grid
+
+    ! k_lim is in plume grid; need to convert to model grid before output
+
+    k1= MAX(4,k_lim(1))
+    k2= MAX(4,k_lim(2))   
+
+    w2= MAX(0.01,wmax(2))
 
     IF (k2 <= k1) THEN
        !print*,'1: ztopmax k=',ztopmax(1), k1
@@ -285,30 +294,30 @@ end subroutine set_grid
   END SUBROUTINE set_flam_vert
 !-------------------------------------------------------------------------
 
-subroutine get_fire_properties(coms,imm,burnt_area,FRP,errmsg,errflg)
+subroutine get_fire_properties(coms,imm,burnt_area,FRP,beta,errmsg,errflg)
 !use module_zero_plumegen_coms
 implicit none
 type(plumegen_coms), pointer :: coms
 integer ::  moist,  i,  icount,imm
-real(kind=kind_phys)::   bfract,  effload,  heat,  hinc ,burnt_area,heat_fluxW,FRP
+real(kind=kind_phys)::   bfract,  effload,  heat,  hinc ,burnt_area,heat_fluxW,FRP, beta
 !real(kind=kind_phys),    dimension(2,4) :: heat_flux
 integer, intent(inout) :: errflg
 character(*), intent(inout) :: errmsg
 INTEGER, parameter :: use_last = 1    ! RAR 10/31/2022: I set to one, checking with Saulo
 
 !real(kind=kind_phys), parameter :: beta = 5.0   !ref.: Wooster et al., 2005
-REAL(kind=kind_phys), parameter :: beta = 0.88  !ref.: Paugam et al., 2015
+!REAL(kind=kind_phys), parameter :: beta = 0.88  !ref.: Paugam et al., 2015
 
 coms%area = burnt_area! area of burn, m^2
 
 !ELSEIF ( PLUMERISE_flag == 2) THEN
     ! "beta" factor converts FRP to convective energy
-    heat_fluxW = beta*(FRP/coms%area)/0.55 ! in W/m^2
+    heat_fluxW = beta*(FRP/coms%area) !SRB: Beta default is 1.6 (=0.88/0.55), /0.55 ! in W/m^2
 ! FIXME: These five lines were not in the known-working version. Delete them?
 !    if(coms%area<1e-6) then
 !      heat_fluxW = 0
 !    else
-!      heat_fluxW = beta*(FRP/coms%area)/0.55 ! in W/m^2
+!      heat_fluxW = beta*(FRP/coms%area)/.55 ! in W/m^2
 !    endif
 
 !ENDIF
@@ -362,7 +371,7 @@ COMS%FMOIST   = MOIST / 100.       !- fuel moisture fraction
 !  COMS%HEATING (ICOUNT) = HEAT * EFFLOAD / COMS%TDUR  ! W/m**2 
 !  COMS%HEATING (ICOUNT) = 80000.  * 0.55         ! W/m**2 
 
-   COMS%HEATING (ICOUNT) = heat_fluxW  * 0.55     ! W/m**2 (0.55 converte para energia convectiva)
+   COMS%HEATING (ICOUNT) = heat_fluxW  * 0.55 !SRB[01/28/2025]: Removed multiplication of 0.55 as heat_fluxW already includes it ! W/m**2 (0.55 converte para energia convectiva)
    ICOUNT = ICOUNT + 1  
   ENDDO  
 !     ramp for 5 minutes, RAR: in the current version this is inactive
@@ -392,7 +401,7 @@ return
 end subroutine get_fire_properties
 !-------------------------------------------------------------------------------
 !
-SUBROUTINE MAKEPLUME (coms,kmt,ztopmax,ixx,imm,mpiid, alpha)
+SUBROUTINE MAKEPLUME (coms,kmt,ztopmax,ixx,imm,mpiid, alpha,wmax)
 !
 ! *********************************************************************
 !
@@ -460,7 +469,9 @@ integer ::  izprint, iconv,  itime, k, kk, kkmax, deltak,ilastprint,kmt &
            ,ixx,nrectotal,i_micro,n_sub_step
 real(kind=kind_phys) ::  vc, g,  r,  cp,  eps,  &
          tmelt,  heatsubl,  heatfus,  heatcond, tfreeze, &
-         ztopmax, wmax, rmaxtime, es, esat, heat,dt_save, alpha !ESAT_PR,
+         ztopmax,wmax, rmaxtime, es, esat, heat,dt_save, alpha !ESAT_PR,
+ !real(kind=kind_phys), intent(out) :: wmax  !SRB: Adding wmax to output
+
 character (len=2) :: cixx
 integer, intent(in) :: mpiid
 ! Set threshold to be the same as dz=100., the constant grid spacing of plume grid model(meters) found in set_grid()

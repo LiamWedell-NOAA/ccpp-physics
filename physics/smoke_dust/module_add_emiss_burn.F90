@@ -12,7 +12,7 @@ CONTAINS
                            fire_hist,hwp,hwp_avg,hwp_prevd,         &
                            swdown,ebb_dcycle,ebu_in,ebu,fire_type,  &
                            q_vap, add_fire_moist_flux,              &
-                           hwp_alpha,                               &
+                           plume_beta_qv, hwp_alpha,                &
                            ids,ide, jds,jde, kds,kde,               &
                            ims,ime, jms,jme, kms,kme,               &
                            its,ite, jts,jte, kts,kte,mpiid          )
@@ -41,6 +41,7 @@ CONTAINS
    INTEGER, DIMENSION(ims:ime,jms:jme), INTENT(IN) :: fire_type
    integer, INTENT(IN) ::  ebb_dcycle     ! RAR: this is going to be namelist dependent, ebb_dcycle=means 
    real(kind_phys), DIMENSION(ims:ime,jms:jme), INTENT(INOUT) :: fire_hist
+   real(kind_phys), intent(in) :: plume_beta_qv ! SRB: namelist scaling factor for fire qv fluxes
 !>--local 
    logical, intent(in)  :: add_fire_moist_flux
    integer :: i,j,k,n,m
@@ -142,7 +143,7 @@ CONTAINS
 
      do j=jts,jte
       do i=its,ite
-       do k=kts,kfire_max
+       do k=kts,kte-1 !SRB:  kfire_max
           if (ebu(i,k,j)<ebb_min) cycle
 
            if (ebb_dcycle==1) then
@@ -156,8 +157,9 @@ CONTAINS
 
            ! SRB: Modifying Water Vapor content based on Emissions
            if (add_fire_moist_flux) then
-             q_vap(i,k,j) = q_vap(i,k,j) + (dm_smoke * ef_h2o * 1.e-9)  ! kg/kg:used 1.e-9 as dm_smoke is in ug/kg
+             q_vap(i,k,j) = q_vap(i,k,j) + (dm_smoke * plume_beta_qv * ef_h2o * 1.e-9)  ! kg/kg:used 1.e-9 as dm_smoke is in ug/kg
              q_vap(i,k,j) = MIN(MAX(q_vap(i,k,j),0._kind_phys),1.e+3_kind_phys)
+
            endif
 
            if ( dbg_opt .and. (k==kts .OR. k==kfire_max) .and. (icall .le. n_dbg_lines) ) then
