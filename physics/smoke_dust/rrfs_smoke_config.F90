@@ -33,7 +33,7 @@ module rrfs_smoke_config
   integer :: pm_settling = 1
   integer :: nfire_types = 5
   integer :: ebb_dcycle  = 2 ! 1: read in ebb_smoke(i,24), 2: daily
-  integer :: hwp_method = 2
+  integer :: hwp_method = 1
   logical :: dbg_opt     = .true.
   logical :: aero_ind_fdb = .false.
   logical :: add_fire_heat_flux= .false.
@@ -43,6 +43,8 @@ module rrfs_smoke_config
   logical :: extended_sd_diags = .false.
   real(kind_phys) :: wetdep_ls_alpha = .5 ! scavenging factor
   real(kind_phys) :: plume_alpha = 0.05
+  real(kind_phys) :: plume_beta    = 1.6    ! Multiplication factor for plumerise HFX
+  real(kind_phys) :: plume_beta_qv = 1.0    ! Multiplication factor for Fire QV flux
   real(kind_phys) :: hwp_alpha = 0.0
 
   ! --
