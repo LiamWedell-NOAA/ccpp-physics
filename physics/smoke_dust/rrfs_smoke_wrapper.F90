@@ -979,7 +979,11 @@ contains
     if ( ebb_dcycle == 2 ) then
       do i=its, ite
        do j=jts, jte
-         totprcp_24hrs (i,j) = smoke2d_RRFS(i,5)
+         if (hwp_alpha == 0.0) then
+           totprcp_24hrs (i,j) = smoke2d_RRFS(i,5)
+         else
+           totprcp_24hrs (i,j) = smokem6_RRFS(i,floor(hour_tmp / 6.0) + 1,5)
+         endif
        enddo
       enddo
     endif
