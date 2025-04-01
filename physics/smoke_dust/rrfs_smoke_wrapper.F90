@@ -1051,7 +1051,7 @@ contains
               hour_tmp = hour_int - 48
             end if
             ebu_in        (i,j) = smokem6_RRFS(i,floor(hour_tmp / 6.0) + 1,1)!/86400.
-            frp_in        (i,j) = smokem6_RRFS(i,floor(hour_tmp / 6.0) + 1,2)!*conv_frp
+            frp_in        (i,j) = smokem6_RRFS(i,floor(hour_tmp / 6.0) + 1,2)*conv_frp
             fire_end_hr   (i,j) = smokem6_RRFS(i,floor(hour_tmp / 6.0) + 1,3)
             hwp_prev_day  (i,j) = smokem6_RRFS(i,floor(hour_tmp / 6.0) + 1,4)
             ebb_smoke_in   (i  ) = ebu_in(i,j)
