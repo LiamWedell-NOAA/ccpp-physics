@@ -2304,6 +2304,14 @@
   type = real
   kind = kind_phys
   active = (do_smoke_coupling)
+[fmc_hr_in]
+  standard_name = fmc_hourly
+  long_name = hourly fuel moisture content
+  units = none
+  dimensions = (horizontal_loop_extent)
+  type = real
+  kind = kind_phys
+  active = (do_smoke_coupling)
 [coef_bb_dc]
   standard_name = coef_bb_dc
   long_name = coef to estimate the fire emission

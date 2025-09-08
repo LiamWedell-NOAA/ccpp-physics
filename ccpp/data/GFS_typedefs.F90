@@ -462,6 +462,7 @@ module GFS_typedefs
     real (kind=kind_phys), pointer :: ebb_smoke_in(:)   => null()  !< input smoke emission
     real (kind=kind_phys), pointer :: frp_output  (:)   => null()  !< output FRP
     !--- For fire diurnal cycle
+    real (kind=kind_phys), pointer :: fmc_hr_in   (:)   => null()  !JR < in FMC
     real (kind=kind_phys), pointer :: fhist       (:)   => null()  !< instantaneous fire coef_bb
     real (kind=kind_phys), pointer :: coef_bb_dc  (:)   => null()  !< instantaneous fire coef_bb
     integer, pointer               :: fire_type   (:)   => null()  !< fire type
@@ -2364,7 +2365,7 @@ module GFS_typedefs
     allocate (Sfcprop%hprime   (IM,Model%nmtvr))
     allocate (Sfcprop%dust12m_in  (IM,12,5))
     allocate (Sfcprop%smoke_RRFS(IM,24,2))
-    allocate (Sfcprop%smoke2d_RRFS(IM,5))
+    allocate (Sfcprop%smoke2d_RRFS(IM,6))  !JR
     allocate (Sfcprop%emi_in   (IM,1))
     allocate(Sfcprop%albdirvis_lnd (IM))
     allocate(Sfcprop%albdirnir_lnd (IM))
@@ -2986,6 +2987,7 @@ module GFS_typedefs
       allocate (Sfcprop%emanoc    (IM))
       allocate (Sfcprop%ebb_smoke_in (IM))
       allocate (Sfcprop%frp_output (IM))
+      allocate (Sfcprop%fmc_hr_in  (IM))  !JR
       allocate (Sfcprop%fhist     (IM))
       allocate (Sfcprop%coef_bb_dc(IM))
       allocate (Sfcprop%fire_type (IM))
@@ -3002,6 +3004,7 @@ module GFS_typedefs
       Sfcprop%frp_output  = clear_val
       Sfcprop%fhist      = 1.
       Sfcprop%coef_bb_dc = clear_val
+      Sfcprop%fmc_hr_in  = 1.  !JR
       Sfcprop%fire_type  = 0
       Sfcprop%fire_in    = clear_val
       Sfcprop%peak_hr    = clear_val
@@ -3012,6 +3015,7 @@ module GFS_typedefs
       allocate (Sfcprop%emseas    (0))
       allocate (Sfcprop%emanoc    (0))
       allocate (Sfcprop%ebb_smoke_in (0))
+      allocate (Sfcprop%fmc_hr_in (0)) !JR
       allocate (Sfcprop%frp_output (0))
       allocate (Sfcprop%fhist     (0))
       allocate (Sfcprop%coef_bb_dc(0))
