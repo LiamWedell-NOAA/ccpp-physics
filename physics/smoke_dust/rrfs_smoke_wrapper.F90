@@ -49,7 +49,7 @@ contains
                               addsmoke_flag_in, ebb_dcycle_in, hwp_method_in,     & ! smoke namelist
                               add_fire_moist_flux_in,                             & ! smoke namelist
                               sc_factor_in, plume_alpha_in,  plume_beta_in,       & ! smoke namelist 
-                              plume_beta_qv_in,
+                              plume_beta_qv_in,                                   &  
                               dust_opt_in, dust_alpha_in, dust_gamma_in,          & ! dust namelist
                               dust_moist_opt_in,                                  & ! dust namelist
                               dust_moist_correction_in, dust_drylimit_factor_in,  & ! dust namelist                        
@@ -470,9 +470,9 @@ contains
                        chem,julday,gmt,xlat,xlong,                   &
                        fire_end_hr, peak_hr,curr_secs,               &
                        coef_bb_dc,fire_hist,hwp_local,hwp_day_avg,   &
-                       swdown,ebb_dcycle,ebu_in,ebu,fire_type,       &
-                       moist(:,:,:,p_qv), add_fire_moist_flux,       &
-                       sadd_fire_moist_flux,plume_beta_qv,sc_factor,                                    &    
+                       swdown,ebb_dcycle,ebu_in,                     &
+                       ebu,fire_type,moist(:,:,:,p_qv),              &
+                       add_fire_moist_flux,plume_beta_qv,sc_factor,  &    
                        ids,ide, jds,jde, kds,kde,                    &
                        ims,ime, jms,jme, kms,kme,                    &
                        its,ite, jts,jte, kts,kte , mpiid             )
