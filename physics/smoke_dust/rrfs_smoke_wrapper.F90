@@ -14,7 +14,7 @@
                                      p_qv, p_atm_shum, p_atm_cldq,plume_wind_eff,       &
                                      p_smoke, p_dust_1, p_coarse_pm, epsilc,            &
                                      n_dbg_lines, add_fire_moist_flux, plume_alpha,     &
-                                     plume_beta, plume_beta_qv, sc_factor
+                                     plume_beta, plume_beta_qv, hwp_alpha 
    use dust_data_mod,         only : dust_alpha, dust_gamma, dust_moist_opt,            &
                                      dust_moist_correction, dust_drylimit_factor
    use seas_mod,              only : gocart_seasalt_driver
@@ -48,7 +48,7 @@ contains
                               plume_wind_eff_in,add_fire_heat_flux_in,            & ! smoke namelist
                               addsmoke_flag_in, ebb_dcycle_in, hwp_method_in,     & ! smoke namelist
                               add_fire_moist_flux_in,                             & ! smoke namelist
-                              sc_factor_in, plume_alpha_in,  plume_beta_in,       & ! smoke namelist 
+                              hwp_alpha_in, plume_alpha_in,  plume_beta_in,       & ! smoke namelist 
                               plume_beta_qv_in,                                   &  
                               dust_opt_in, dust_alpha_in, dust_gamma_in,          & ! dust namelist
                               dust_moist_opt_in,                                  & ! dust namelist
@@ -61,7 +61,7 @@ contains
   real(kind_phys), intent(in) :: dust_alpha_in, dust_gamma_in, wetdep_ls_alpha_in, plume_alpha_in, plume_beta_in, plume_beta_qv_in
   real(kind_phys), intent(in) :: dust_moist_correction_in
   real(kind_phys), intent(in) :: dust_drylimit_factor_in
-  real(kind_phys), intent(in) :: sc_factor_in
+  real(kind_phys), intent(in) :: hwp_alpha_in
   integer,         intent(in) :: dust_opt_in,dust_moist_opt_in, wetdep_ls_opt_in, pm_settling_in, seas_opt_in
   integer,         intent(in) :: drydep_opt_in
   logical,         intent(in) :: aero_ind_fdb_in,dbg_opt_in, extended_sd_diags_in, add_fire_heat_flux_in, add_fire_moist_flux_in
@@ -102,7 +102,7 @@ contains
      plume_alpha           = plume_alpha_in 
      plume_beta            = plume_beta_in
      plume_beta_qv         = plume_beta_qv_in
-     sc_factor             = sc_factor_in
+     hwp_alpha             = hwp_alpha_in
   !>-Feedback
      aero_ind_fdb          = aero_ind_fdb_in
   !>-Other
@@ -440,7 +440,7 @@ contains
         do j=jts,jte
         do i=its,ite
          IF ( fire_type(i,j) .eq. 4 ) THEN ! only apply scaling factor to wildfires
-            frp_inst(i,j) = MIN(sc_factor*frp_in(i,j)*coef_bb_dc(i,j),frp_max)
+            frp_inst(i,j) = MIN(hwp_alpha*frp_in(i,j)*coef_bb_dc(i,j),frp_max)
          ELSE
             frp_inst(i,j) = MIN(frp_in(i,j)*coef_bb_dc(i,j),frp_max)
          ENDIF
@@ -472,7 +472,7 @@ contains
                        coef_bb_dc,fire_hist,hwp_local,hwp_day_avg,   &
                        swdown,ebb_dcycle,ebu_in,                     &
                        ebu,fire_type,moist(:,:,:,p_qv),              &
-                       add_fire_moist_flux,plume_beta_qv,sc_factor,  &    
+                       add_fire_moist_flux,plume_beta_qv,hwp_alpha,  &    
                        ids,ide, jds,jde, kds,kde,                    &
                        ims,ime, jms,jme, kms,kme,                    &
                        its,ite, jts,jte, kts,kte , mpiid             )

@@ -45,7 +45,7 @@ module rrfs_smoke_config
   real(kind_phys) :: plume_alpha = 0.05
   real(kind_phys) :: plume_beta    = 1.6    ! Multiplication factor for plumerise HFX
   real(kind_phys) :: plume_beta_qv = 1.0    ! Multiplication factor for Fire QV flux
-  real(kind_phys) ::  sc_factor= 0.0
+  real(kind_phys) :: hwp_alpha = 0.0
 
   ! --
   integer, parameter :: CHEM_OPT_GOCART= 1

@@ -12,7 +12,7 @@ CONTAINS
                            coef_bb_dc, fire_hist, hwp, hwp_prevd,   &
                            swdown,ebb_dcycle, ebu_in, ebu,fire_type,&
                            q_vap, add_fire_moist_flux,              &
-                           plume_beta_qv, sc_factor,                &
+                           plume_beta_qv, hwp_alpha,                &
                            ids,ide, jds,jde, kds,kde,               &
                            ims,ime, jms,jme, kms,kme,               &
                            its,ite, jts,jte, kts,kte,mpiid          )
@@ -56,7 +56,7 @@ CONTAINS
    real(kind_phys) :: timeq, fire_age, age_hr, dt1,dt2,dtm         ! For BB emis. diurnal cycle calculation
 
 ! For Gaussian diurnal cycle
-   real(kind_phys), INTENT(IN) :: sc_factor  ! to scale up the wildfire emissions, Jordan please make this a namelist option
+   real(kind_phys), INTENT(IN) :: hwp_alpha  ! to scale up the wildfire emissions, Jordan please make this a namelist option
    real(kind_phys), PARAMETER :: rinti=2.1813936e-8, ax2=3400., const2=130., &
                    coef2=10.6712963e-4, cx2=7200., timeq_max=3600.*24.
 !>-- Fire parameters: Fores west, Forest east, Shrubland, Savannas, Grassland, Cropland
@@ -124,7 +124,7 @@ CONTAINS
              !dc_gp = MAX(0._kind_phys,dc_gp)
    
              !dc_fn = MIN(dc_hwp/dc_gp,3._kind_phys)
-             coef_bb_dc(i,j) = sc_factor* fire_hist(i,j)* dc_hwp     ! RAR: scaling factor is applied to the forest fires only, except the eastern US
+             coef_bb_dc(i,j) = hwp_alpha * fire_hist(i,j)* dc_hwp     ! RAR: scaling factor is applied to the forest fires only, except the eastern US
 
              IF ( dbg_opt .AND. time_int<5000.) then
                WRITE(6,*) 'i,j,fire_hist(i,j),peak_hr(i,j) ', i,j,fire_hist(i,j),peak_hr(i,j)

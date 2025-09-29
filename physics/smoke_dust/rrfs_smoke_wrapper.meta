@@ -106,7 +106,7 @@
   dimensions = ()
   type = logical
   intent = in
-[sc_factor_in]
+[hwp_alpha_in]
   standard_name = scale_factor_for_wildfire_emissions
   long_name = scale factor for wildfire emissions
   units = 1
