@@ -14,7 +14,7 @@
                                      p_qv, p_atm_shum, p_atm_cldq,plume_wind_eff,       &
                                      p_smoke, p_dust_1, p_coarse_pm, epsilc,            &
                                      n_dbg_lines, add_fire_moist_flux, plume_alpha,     &
-                                     plume_beta, plume_beta_qv, hwp_alpha 
+                                     plume_beta, plume_beta_qv, hwp_alpha, plume_sfc_opt 
    use dust_data_mod,         only : dust_alpha, dust_gamma, dust_moist_opt,            &
                                      dust_moist_correction, dust_drylimit_factor
    use seas_mod,              only : gocart_seasalt_driver
@@ -47,7 +47,7 @@ contains
                               rrfs_sd, do_plumerise_in, plumerisefire_frq_in,     & ! smoke namelist 
                               plume_wind_eff_in,add_fire_heat_flux_in,            & ! smoke namelist
                               addsmoke_flag_in, ebb_dcycle_in, hwp_method_in,     & ! smoke namelist
-                              add_fire_moist_flux_in,                             & ! smoke namelist
+                              add_fire_moist_flux_in, plume_sfc_opt_in,           & ! smoke namelist
                               hwp_alpha_in, plume_alpha_in,  plume_beta_in,       & ! smoke namelist 
                               plume_beta_qv_in,                                   &  
                               dust_opt_in, dust_alpha_in, dust_gamma_in,          & ! dust namelist
@@ -66,7 +66,7 @@ contains
   integer,         intent(in) :: drydep_opt_in
   logical,         intent(in) :: aero_ind_fdb_in,dbg_opt_in, extended_sd_diags_in, add_fire_heat_flux_in, add_fire_moist_flux_in
   integer,         intent(in) :: hwp_method_in, plume_wind_eff_in, plumerisefire_frq_in, n_dbg_lines_in
-  integer,         intent(in) :: addsmoke_flag_in, ebb_dcycle_in
+  integer,         intent(in) :: addsmoke_flag_in, ebb_dcycle_in, plume_sfc_opt_in
   logical,         intent(in) :: do_plumerise_in, rrfs_sd
   character(len=*),intent(out):: errmsg
   integer,         intent(out) :: errflg
@@ -91,6 +91,7 @@ contains
      wetdep_ls_alpha       = wetdep_ls_alpha_in
   !>-Smoke
      do_rrfs_sd            = rrfs_sd
+     plume_sfc_opt         = plume_sfc_opt_in
      ebb_dcycle            = ebb_dcycle_in
      do_plumerise          = do_plumerise_in
      plumerisefire_frq     = plumerisefire_frq_in
@@ -453,6 +454,7 @@ contains
                    rho_phy,vvel,u_phy,v_phy,pi_phy,wind_phy,           &
                    z_at_w,zmid,g,con_cp,con_rd,                        &
                    frp_inst, min_fplume2, max_fplume2,                 &
+                   plume_sfc_opt,                                      &
                    plume_wind_eff, wmax2,                              &
                    kpbl_thetav,kpbl,curr_secs,                         &
                    xlat, xlong, uspdavg2d, hpbl2d, mpiid,plume_alpha,  &

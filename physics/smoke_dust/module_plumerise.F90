@@ -20,6 +20,7 @@ subroutine ebu_driver (      flam_frac,ebu_in,ebu,                   &
                              wind_phy,                               &   ! SRB: added wind_phy
                              z_at_w,z,g,con_cp,con_rd,               &   ! scale_fire_emiss is part of config_flags
                              frp_inst, k_min, k_max,                 &   ! RAR:
+                             smoke_sfc_opt,                          &   ! JR Added 2nd phase:namelist option emiss
                              wind_eff_opt, wmax,                     &
                              kpbl_thetav, kpbl,                      &   ! SRB: added kpbl_thetav and kpbl
                              curr_secs,xlat, xlong , uspdavg2d,      &
@@ -50,7 +51,7 @@ subroutine ebu_driver (      flam_frac,ebu_in,ebu,                   &
                                   ims,ime, jms,jme, kms,kme,               &
                                   its,ite, jts,jte, kts,kte
    real(kind_phys) :: curr_secs
-   INTEGER,      INTENT(IN   ) :: wind_eff_opt
+   INTEGER,      INTENT(IN   ) :: wind_eff_opt, smoke_sfc_opt  !! JR Added 2nd phase:namelist option emiss
    REAL(kind_phys), INTENT(IN)    :: alpha, beta !  SRB: Enrainment constant for plumerise scheme
    real(kind=kind_phys), DIMENSION( ims:ime, kms:kme, jms:jme ), INTENT(INOUT ) ::  ebu
    real(kind=kind_phys), INTENT(IN )  :: g, con_cp, con_rd
@@ -146,8 +147,15 @@ check_pl:  IF (do_plumerise) THEN    ! if the namelist option is set for plumeri
                   flam_frac(i,j)= 0. 
                ELSE IF ( (frp_inst(i,j) .le. frp_wthreshold) .AND. ( uspdavg2d(i,1) .ge. uspd_lim ) .AND. & 
                        ( hpbl2d(i,1) .gt. zpbl_lim) .AND. (wind_eff_opt .eq. 1)) THEN
-                  kp1=3
-                  kp2=MAX(4,NINT(real(kpbl(i,j))/3._kind_phys))
+                       !JR starts, added: phase 2 namelist for add plume
+                       if (smoke_sfc_opt == 2) then
+                           kp1=3
+                           kp2=MAX(4,NINT(real(kpbl(i,j))/3._kind_phys))
+                       else  
+                           kp1=2
+                           kp2=MAX(3,NINT(real(kpbl(i,j))/3._kind_phys))
+                       endif
+                       ! JR ends 
                   flam_frac(i,j)=0.85 
                ELSE
                   flam_frac(i,j)=0.9  ! kp1,2 come from the plumerise scheme
@@ -159,9 +167,14 @@ check_pl:  IF (do_plumerise) THEN    ! if the namelist option is set for plumeri
                do k=kp1,kp2-1
                      ebu(i,k,j)=flam_frac(i,j)*ebu_in(i,j)*(z_at_w(i,k+1,j)-z_at_w(i,k,j))/dz_plume
                enddo
-               ebu(i,kts,j)  = (1.-flam_frac(i,j))*0.47* ebu_in(i,j) !SRB: adding two default layers 2024/08/16
-               ebu(i,kts+1,j)= (1.-flam_frac(i,j))*0.53* ebu_in(i,j) ! dz=18.7, 21.2 first two levels
-
+               !JR starts, added: phase 2 namelist for add plume
+               if (smoke_sfc_opt == 2) then
+                  ebu(i,kts,j)  = (1.-flam_frac(i,j))*0.47* ebu_in(i,j) !SRB: adding two default layers 2024/08/16
+                  ebu(i,kts+1,j)= (1.-flam_frac(i,j))*0.53* ebu_in(i,j) ! dz=18.7, 21.2 first two levels
+               else
+                  ebu(i,kts,j)  = (1.-flam_frac(i,j))* ebu_in(i,j)
+               endif
+               ! JR ends     
                ! For output diagnostic
                k_min(i,j) = CEILING(z_lev(kp1)) !kp1
                k_max(i,j) = CEILING(z_lev(kp2)) !kp2
