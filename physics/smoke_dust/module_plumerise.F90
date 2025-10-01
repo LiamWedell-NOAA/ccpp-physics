@@ -20,7 +20,7 @@ subroutine ebu_driver (      flam_frac,ebu_in,ebu,                   &
                              wind_phy,                               &   ! SRB: added wind_phy
                              z_at_w,z,g,con_cp,con_rd,               &   ! scale_fire_emiss is part of config_flags
                              frp_inst, k_min, k_max,                 &   ! RAR:
-                             smoke_sfc_opt,                          &   ! JR Added 2nd phase:namelist option emiss
+                             burntarea_delta, smoke_sfc_opt,         &   ! JR Added 2nd phase:namelist option emiss
                              wind_eff_opt, wmax,                     &
                              kpbl_thetav, kpbl,                      &   ! SRB: added kpbl_thetav and kpbl
                              curr_secs,xlat, xlong , uspdavg2d,      &
@@ -52,7 +52,7 @@ subroutine ebu_driver (      flam_frac,ebu_in,ebu,                   &
                                   its,ite, jts,jte, kts,kte
    real(kind_phys) :: curr_secs
    INTEGER,      INTENT(IN   ) :: wind_eff_opt, smoke_sfc_opt  !! JR Added 2nd phase:namelist option emiss
-   REAL(kind_phys), INTENT(IN)    :: alpha, beta !  SRB: Enrainment constant for plumerise scheme
+   REAL(kind_phys), INTENT(IN)    :: alpha, beta, burntarea_delta !  SRB: Enrainment constant for plumerise scheme
    real(kind=kind_phys), DIMENSION( ims:ime, kms:kme, jms:jme ), INTENT(INOUT ) ::  ebu
    real(kind=kind_phys), INTENT(IN )  :: g, con_cp, con_rd
    real(kind=kind_phys), DIMENSION( ims:ime, jms:jme ), INTENT(IN )  :: ebu_in
@@ -128,7 +128,8 @@ check_pl:  IF (do_plumerise) THEN    ! if the namelist option is set for plumeri
                               k_max(i,j), dbg_opt, g, con_cp,       &
                               con_rd, cpor, errmsg, errflg,         &
                               icall, mpiid, xlat(i,j), xlong(i,j),  & 
-                              curr_secs, alpha, beta, frp_min, wmax(i,j))
+                              curr_secs, alpha, beta, frp_min,      &
+                              burntarea_delta, wmax(i,j))
                if(errflg/=0) return
 
                kp1= k_min(i,j)

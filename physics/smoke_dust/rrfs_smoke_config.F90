@@ -42,6 +42,7 @@ module rrfs_smoke_config
   integer :: plume_wind_eff = 1
   logical :: extended_sd_diags = .false.
   real(kind_phys) :: wetdep_ls_alpha = .5 ! scavenging factor
+  real(kind_phys) :: plume_burntarea_delta = 0.5 !JS added, phase2
   real(kind_phys) :: plume_alpha = 0.05
   real(kind_phys) :: plume_beta    = 1.6    ! Multiplication factor for plumerise HFX
   real(kind_phys) :: plume_beta_qv = 1.0    ! Multiplication factor for Fire QV flux

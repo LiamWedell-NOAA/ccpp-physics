@@ -15,13 +15,13 @@ module module_smoke_plumerise
                          frp_inst,k1,k2, dbg_opt, g, cp, rgas,      &
                          cpor,  errmsg, errflg, icall, mpiid,       &
                          lat, long, curr_secs, alpha, beta,         & 
-                         frp_min, w2) ! SRB: Getting plumerise variable out
+                         frp_min, burntarea_delta, w2) ! SRB: Getting plumerise variable out
 
   implicit none
 
   LOGICAL, INTENT (IN) :: dbg_opt
   INTEGER, INTENT (IN) :: wind_eff_opt, mpiid
-  real(kind_phys),  INTENT(IN) ::  lat,long, curr_secs, alpha, beta ! SRB
+  real(kind_phys),  INTENT(IN) ::  lat,long, curr_secs, alpha, beta, burntarea_delta ! SRB
 
   REAL(kind_phys), INTENT(IN) :: frp_min 
 
@@ -91,9 +91,11 @@ module module_smoke_plumerise
     !- loop over the minimum and maximum heat fluxes/frp_inst
     lp_minmax: do imm=1,2
         if(imm==1 ) then
-          burnt_area = 0.7* 0.0006* frp_inst   !    0.00021* frp_inst          ! - 0.5*plume_fre(istd_fsize))
+          !JR starts: phase2      
+          burnt_area = (1._kind_phys-burntarea_delta)* 0.0006* frp_inst   !    0.00021* frp_inst          ! - 0.5*plume_fre(istd_fsize))
         elseif(imm==2 ) then
-          burnt_area = 1.3* 0.0006* frp_inst   ! RAR: Based on Laura's paper I increased the fire size *3. This should depend on the fuel type and meteorology/HWP
+          burnt_area = (1._kind_phys+burntarea_delta)* 0.0006* frp_inst   ! RAR: Based on Laura's paper I increased the fire size *3. This should      depend on the fuel type and meteorology/HWP
+         !JR ends
         endif
         burnt_area= max(1.0e4,burnt_area)
         

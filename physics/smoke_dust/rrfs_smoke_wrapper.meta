@@ -64,6 +64,13 @@
   dimensions = ()
   type = integer
   intent = in
+[plume_burntarea_delta_in]
+  standard_name = control_for_plumerise_burntarea_delta
+  long_name = plumerise burnt area delta
+  units = index
+  dimensions = ()
+  type = real
+  intent = in
 [plume_wind_eff_in]
   standard_name = option_for_wind_effects_on_smoke_plumerise
   long_name = wind effect plumerise option
@@ -81,6 +88,13 @@
 [addsmoke_flag_in]
   standard_name = control_for_smoke_biomass_burning_emissions
   long_name = rrfs smoke add smoke option
+  units = index
+  dimensions = ()
+  type = integer
+  intent = in
+[plume_sfc_opt_in]
+  standard_name = control_for_smoke_release_at_surface
+  long_name = rrfs smoke release at surface option
   units = index
   dimensions = ()
   type = integer

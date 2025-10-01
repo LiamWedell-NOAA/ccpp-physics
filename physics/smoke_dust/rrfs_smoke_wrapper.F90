@@ -12,6 +12,7 @@
                                      ebb_dcycle, extended_sd_diags,add_fire_heat_flux,  &
                                      num_moist, num_chem, num_emis_seas, num_emis_dust, &
                                      p_qv, p_atm_shum, p_atm_cldq,plume_wind_eff,       &
+                                     plume_burntarea_delta,                             &
                                      p_smoke, p_dust_1, p_coarse_pm, epsilc,            &
                                      n_dbg_lines, add_fire_moist_flux, plume_alpha,     &
                                      plume_beta, plume_beta_qv, hwp_alpha, plume_sfc_opt 
@@ -45,6 +46,7 @@ contains
                               drydep_opt_in, pm_settling_in,                      & ! dry dep namelist
                               wetdep_ls_opt_in,wetdep_ls_alpha_in,                & ! wet dep namelist
                               rrfs_sd, do_plumerise_in, plumerisefire_frq_in,     & ! smoke namelist 
+                              plume_burntarea_delta_in,                           & ! smoke namelist
                               plume_wind_eff_in,add_fire_heat_flux_in,            & ! smoke namelist
                               addsmoke_flag_in, ebb_dcycle_in, hwp_method_in,     & ! smoke namelist
                               add_fire_moist_flux_in, plume_sfc_opt_in,           & ! smoke namelist
@@ -61,7 +63,7 @@ contains
   real(kind_phys), intent(in) :: dust_alpha_in, dust_gamma_in, wetdep_ls_alpha_in, plume_alpha_in, plume_beta_in, plume_beta_qv_in
   real(kind_phys), intent(in) :: dust_moist_correction_in
   real(kind_phys), intent(in) :: dust_drylimit_factor_in
-  real(kind_phys), intent(in) :: hwp_alpha_in
+  real(kind_phys), intent(in) :: hwp_alpha_in, plume_burntarea_delta_in
   integer,         intent(in) :: dust_opt_in,dust_moist_opt_in, wetdep_ls_opt_in, pm_settling_in, seas_opt_in
   integer,         intent(in) :: drydep_opt_in
   logical,         intent(in) :: aero_ind_fdb_in,dbg_opt_in, extended_sd_diags_in, add_fire_heat_flux_in, add_fire_moist_flux_in
@@ -97,6 +99,7 @@ contains
      plumerisefire_frq     = plumerisefire_frq_in
      addsmoke_flag         = addsmoke_flag_in
      hwp_method            = hwp_method_in
+     plume_burntarea_delta = plume_burntarea_delta_in
      plume_wind_eff        = plume_wind_eff_in
      add_fire_heat_flux    = add_fire_heat_flux_in
      add_fire_moist_flux   = add_fire_moist_flux_in  
@@ -454,7 +457,7 @@ contains
                    rho_phy,vvel,u_phy,v_phy,pi_phy,wind_phy,           &
                    z_at_w,zmid,g,con_cp,con_rd,                        &
                    frp_inst, min_fplume2, max_fplume2,                 &
-                   plume_sfc_opt,                                      &
+                   plume_burntarea_delta, plume_sfc_opt,               &
                    plume_wind_eff, wmax2,                              &
                    kpbl_thetav,kpbl,curr_secs,                         &
                    xlat, xlong, uspdavg2d, hpbl2d, mpiid,plume_alpha,  &
