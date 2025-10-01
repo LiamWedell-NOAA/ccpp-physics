@@ -127,7 +127,7 @@ contains
                    nsoil, smc, tslb, vegtype_dom, vegtype_frac, soiltyp, nlcat,            &
                    dswsfc, zorl, snow, julian,recmol,                                      &
                    idat, rain_cpl, rainc_cpl, hf2d, g, pi, con_cp, con_rd, con_fv,         &
-                   dust12m_in, emi_ant_in, smoke_RRFS, smoke2d_RRFS,                       &
+                   dust12m_in, emi_ant_in, smoke_RRFS, smoke2d_RRFS, eco_in,eco_id_in,     & !JR added ecosystem map
                    ntrac, qgrs, gq0, chem3d, tile_num,                                     &
                    ntsmoke, ntdust, ntcoarsepm, imp_physics, imp_physics_thompson,         &
                    nwfa, nifa, emanoc, emdust, emseas, drydep_flux_out, wetdpr,            &
@@ -166,6 +166,8 @@ contains
     real(kind_phys), dimension(:),     intent(inout) :: emdust, emseas, emanoc
     real(kind_phys), dimension(:),     intent(inout) :: ebb_smoke_in,coef_bb, frp_output, fhist
     real(kind_phys), dimension(:,:),   intent(inout) :: ebu_smoke
+    real(kind_phys), dimension(:),     intent(inout) :: eco_id_in !JR ECO map ID in the output
+    real(kind_phys), dimension(:,:),   intent(in)    :: eco_in   !JR ecosystem map
     real(kind_phys), dimension(:,:),   intent(inout) :: rho_dry
     real(kind_phys), dimension(:),     intent(out  ) :: fire_heat_flux_out, frac_grid_burned_out
     real(kind_phys), dimension(:),     intent(inout) :: max_fplume, min_fplume, wmax_plume, uspdavg, hpbl_thetav
@@ -211,7 +213,7 @@ contains
     real(kind_phys), dimension(ims:im, jms:jme )  :: coef_bb_dc, flam_frac, frp_in,           &
                                           fire_hist, peak_hr, lu_nofire, lu_qfire, lu_sfire,  &
                                                      ebu_in, fire_end_hr, hwp_day_avg,        &
-                                                     uspdavg2d, hpbl2d, totprcp_24hrs
+                                                     uspdavg2d, hpbl2d, totprcp_24hrs, eco_id
     integer,         dimension(ims:im, jms:jme )  :: min_fplume2, max_fplume2, fire_type,  &
                                                      kpbl,kpbl_thetav
     real,            dimension(ims:im, jms:jme)   :: wmax2
@@ -334,6 +336,7 @@ contains
         ntsmoke, ntdust,ntcoarsepm,                                     &
         moist,chem,ebu_in,kpbl_thetav,ebb_smoke_in,                     &
         fire_hist,frp_in, hwp_day_avg, totprcp_24hrs, fire_end_hr,      &
+        eco_id, eco_id_in,eco_in,                                       &    !JR ECO map
         emis_anoc,smois,stemp,ivgtyp,isltyp,vegfrac,rmol,swdown,znt,    &
         hfx,pbl,snowh,clayf,rdrag,sandf,ssm,uthr,oro, hwp_local,        &
         t2m,dpt2m,wetness,kpbl,                                         &
@@ -369,8 +372,11 @@ contains
            fire_type(i,j) = 0
            lu_nofire(i,j) = 1.0
         else
-          ! Permanent wetlands, snow/ice, water, barren tundra:
-          lu_nofire(i,j)= vegfrac(i,11,j) + vegfrac(i,15,j) + vegfrac(i,17,j) + vegfrac(i,20,j)
+          !JR starts, 2nd phase
+          ! snow/ice, water, barren tundra:
+          ! SRB: [04-29-2025] Removed wetlands vegfrac(:,11,:) from lu_nofire to include fires from wetlands
+          ! SRB: [04-29-2025] fire_type=2 is assigned based on the eco_id map now      
+          lu_nofire(i,j)= vegfrac(i,15,j) + vegfrac(i,17,j) + vegfrac(i,20,j)
           ! cropland, urban, cropland/natural mosaic, barren and sparsely
           ! vegetated and non-vegetation areas: 
           lu_qfire(i,j) = lu_nofire(i,j) + vegfrac(i,12,j) + vegfrac(i,13,j) + vegfrac(i,14,j) + vegfrac(i,16,j)
@@ -380,8 +386,13 @@ contains
             fire_type(i,j) = 0
           else if (lu_qfire(i,j)>0.9) then   ! Ag. and urban fires
             fire_type(i,j) = 1
-          else if (xlong(i,j)>260. .AND. xlat(i,j)>25. .AND. xlat(i,j)<41.) then
+          else if (eco_id(i,j) .eq. 8) then
             fire_type(i,j) = 2    ! slash burn and wildfires in the east, eastern temperate forest ecosystem
+            ! SRB: Eastern wildland fires if FRE>1E6MJ and eco region is 8 and the fire is not older than 6 hrs
+            if (ebu_in(i,j)*3600*(1/0.416) .ge. 1.E6 .and. fire_end_hr(i,j) .le. 8 ) then
+                fire_type(i,j) = 4
+            endif
+          !JR ends  
           else if (lu_sfire(i,j)>0.8) then
             fire_type(i,j) = 3    ! savanna and grassland fires
           else 
@@ -669,6 +680,7 @@ contains
         ntsmoke, ntdust, ntcoarsepm,                                       &
         moist,chem,ebu_in,kpbl_thetav,ebb_smoke_in,                        &
         fire_hist,frp_in, hwp_day_avg, totprcp_24hrs, fire_end_hr,         &
+        eco_id,eco_id_in,eco_in,                                           &  !JR ECO map
         emis_anoc,smois,stemp,ivgtyp,isltyp,vegfrac,rmol,swdown,           &
         znt,hfx,pbl,snowh,clayf,rdrag,sandf,ssm,uthr,oro,hwp_local,        &
         t2m,dpt2m,wetness,kpbl,                                            &
@@ -740,10 +752,15 @@ contains
     real(kind_phys), parameter :: delta_theta4gust = 0.5
     real(kind=kind_phys),parameter :: p1000mb = 100000.
     real(kind_phys) :: precip_factor,wet_fact
+    real(kind_phys), dimension(ims:ime,jms:jme), intent(inout) :: eco_id ! JR ECO map read in
+    real(kind_phys), dimension(ims:ime),         intent(inout) :: eco_id_in ! JR ECO map readed to check in the output
+    real(kind=kind_phys), dimension(ims:ime,     1),   intent(in) :: eco_in   !JR eco map
 
     ! -- initialize fire emissions
     ebu_in         = 0._kind_phys
     ebb_smoke_in   = 0._kind_phys
+    eco_id_in      = 1   !JR ECO map
+    eco_id         = 1   !JR ECO map
     emis_anoc      = 0._kind_phys
     frp_in         = 0._kind_phys
     hwp_day_avg    = 0._kind_phys
@@ -1047,6 +1064,17 @@ contains
        enddo
       enddo
     end if
+
+   !JR starts asngning eco_id
+   if ( ebb_dcycle == 2 ) then
+     do i=its, ite
+      do j=jts, jte
+        eco_id        (i,j) = eco_in(i,1)
+        eco_id_in     (i  ) = eco_id(i,j)
+      enddo
+     enddo
+   endif
+   !JR ends asngning eco_id
 
     if (ktau==1) then
      do j=jts,jte
