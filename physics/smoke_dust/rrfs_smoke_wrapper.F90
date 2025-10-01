@@ -739,7 +739,7 @@ contains
     integer, dimension(ims:ime, jms:jme),intent(out) :: kpbl, kpbl_thetav
     real(kind_phys), parameter :: delta_theta4gust = 0.5
     real(kind=kind_phys),parameter :: p1000mb = 100000.
-    real(kind_phys) :: precip_factor
+    real(kind_phys) :: precip_factor,wet_fact
 
     ! -- initialize fire emissions
     ebu_in         = 0._kind_phys
