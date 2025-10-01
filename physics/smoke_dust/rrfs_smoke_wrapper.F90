@@ -986,10 +986,18 @@ contains
     endif
     do i=its,ite
       SFCWIND2=max(sqrt(u10m(i)**2+v10m(i)**2),3._kind_phys)
+      !JR starts, phase 2
+      !SRB: Limiting wetness factor over land=0 pixels for hwp calculation
+      if (xland(i,1) .eq. 0) then
+          wet_fact=vegfrac(i,17,1)
+       else
+          wet_fact=1._kind_phys
+       endif
+       !JR ends 
       SELECT CASE (hwp_method)
       CASE (1) ! Operational method - includes accumulated precip
         hwp_local(i,1)=0.022_kind_phys*MAX(precip_factor-(totprcp(i)+totprcp_24hrs(i,1))*1.e+3_kind_phys,0._kind_phys)/precip_factor * &
-                     ((1._kind_phys-wetness(i))**0.51_kind_phys) *                                                                     & 
+                     ((1._kind_phys-wetness(i)*wet_fact)**0.51_kind_phys) *& 
                      (SFCWIND2*hpbl2d(i,1))**0.57 *                                                                                    &
                      MIN(25.0_kind_phys,MAX(15._kind_phys,t2m(i)-dpt2m(i)))**0.74 *                                                    &
                      MIN(3._kind_phys, 1._kind_phys + dswsfc(i)/250._kind_phys)**0.18 !+ 28.67_kind_phys   ! Eric update   01/2024
