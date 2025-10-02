@@ -646,6 +646,14 @@
   type = real
   kind = kind_phys
   intent = in
+smokedc6_RRFS]
+  standard_name = emission_smoke_6hrly
+  long_name = emission fire RRFS 6hr
+  units = various
+  dimensions = (horizontal_loop_extent,5,6)
+  type = real
+  kind = kind_phys
+  intent = in
 [ntrac]
   standard_name = number_of_tracers
   long_name = number of tracers

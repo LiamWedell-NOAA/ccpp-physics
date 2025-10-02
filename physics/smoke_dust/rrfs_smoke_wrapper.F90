@@ -127,7 +127,8 @@ contains
                    nsoil, smc, tslb, vegtype_dom, vegtype_frac, soiltyp, nlcat,            &
                    dswsfc, zorl, snow, julian,recmol,                                      &
                    idat, rain_cpl, rainc_cpl, hf2d, g, pi, con_cp, con_rd, con_fv,         &
-                   dust12m_in, emi_ant_in, smoke_RRFS, smoke2d_RRFS, eco_in,eco_id_in,     & !JR added ecosystem map
+                   dust12m_in, emi_ant_in, smoke_RRFS, smoke2d_RRFS, smokedc6_RRFS,        &
+                   eco_in,eco_id_in,                                                       & !JR added ecosystem map
                    ntrac, qgrs, gq0, chem3d, tile_num,                                     &
                    ntsmoke, ntdust, ntcoarsepm, imp_physics, imp_physics_thompson,         &
                    nwfa, nifa, emanoc, emdust, emseas, drydep_flux_out, wetdpr,            &
@@ -154,6 +155,9 @@ contains
     real(kind_phys), dimension(:,:,:), intent(in)    :: dust12m_in
     real(kind_phys), dimension(:,:,:), intent(in)    :: smoke_RRFS
     real(kind_phys), dimension(:,:),   intent(in)    :: smoke2d_RRFS
+    !JR st: added method 6
+    real(kind_phys), dimension(:,:,:),   intent(in)    :: smokem6_RRFS
+    !JR ends
     real(kind_phys), dimension(:,:),   intent(in)    :: emi_ant_in
     real(kind_phys), dimension(:),     intent(in)    :: u10m, v10m, ustar, dswsfc,         &
                            recmol, garea, rlat,rlon, tskin, pb2d, zorl, snow,              &
@@ -326,6 +330,7 @@ contains
         nsoil,smc,tslb,vegtype_dom,soiltyp,                             &
         nlcat,vegtype_frac,dswsfc,zorl,                                 &
         snow,dust12m_in,emi_ant_in,smoke_RRFS,smoke2d_RRFS,coef_bb_dc,  &
+        smokedc6_RRFS,                                                  & !JR added method 6
         hf2d, pb2d, g, pi, hour_int, peak_hr,uspdavg2d,                 &
         u10,v10,ust,tsk,xland,xlat,xlong,dxy,                           &
         rri,t_phy,u_phy,v_phy,p_phy,pi_phy,wind_phy,theta_phy,          &
@@ -670,6 +675,7 @@ contains
         pr3d,ph3d,phl3d,tk3d,prl3d,us3d,vs3d,spechum,w,                    &
         nsoil,smc,tslb,vegtype_dom,soiltyp,nlcat,vegtype_frac,dswsfc,zorl, &
         snow_cpl,dust12m_in,emi_ant_in,smoke_RRFS,smoke2d_RRFS,coef_bb_dc, &
+        smokedc6_RRFS,                                                     &  !JR added
         hf2d, pb2d, g, pi, hour_int, peak_hr,uspdavg2d,                    &
         u10,v10,ust,tsk,xland,xlat,xlong,dxy,                              &
         rri,t_phy,u_phy,v_phy,p_phy,pi_phy,wind_phy,theta_phy,             &
@@ -707,6 +713,9 @@ contains
 ! This is a place holder for ebb_dcycle == 2, currently set to hold a single
 ! value, which is the previous day's average of hwp, frp, ebb, fire_end
     real(kind=kind_phys), dimension(ims:ime,     5),   intent(in) :: smoke2d_RRFS
+    !JR st: added method 6
+    real(kind=kind_phys), dimension(ims:ime, 5, 6),   intent(in) :: smokedc6_RRFS
+    ! JR ends
     real(kind=kind_phys), dimension(ims:ime,     1),   intent(in) :: emi_ant_in
     real(kind=kind_phys), dimension(ims:ime, kms:kme), intent(in) :: pr3d,ph3d
     real(kind=kind_phys), dimension(ims:ime, kts:kte), intent(in) ::       &
@@ -997,7 +1006,14 @@ contains
     if ( ebb_dcycle == 2 ) then
       do i=its, ite
        do j=jts, jte
-         totprcp_24hrs (i,j) = smoke2d_RRFS(i,5)
+         !totprcp_24hrs (i,j) = smoke2d_RRFS(i,5)
+         !JR st: adding smokedc6_RRFS
+         fire_end_hr   (i,j) = smokem6_RRFS(i,5,3) !This is same for all 4 time intervals
+         hwp_day_avg   (i,j) = smokem6_RRFS(i,5,4) !24 hr avg
+         totprcp_24hrs (i,j) = smokem6_RRFS(i,5,5) !This is same for all 4 time intervals
+         ebu_daily_avg (i,j) = smokem6_RRFS(i,5,1) !24 hr avg
+         frp_daily_avg (i,j) = smokem6_RRFS(i,5,2)*conv_frp
+         !JR ends
        enddo
       enddo
     endif
@@ -1056,11 +1072,32 @@ contains
     if (ebb_dcycle == 2) then
       do i=its, ite
        do j=jts, jte 
-         ebu_in        (i,j) = smoke2d_RRFS(i,1)!/86400.
-         frp_in        (i,j) = smoke2d_RRFS(i,2)*conv_frp
-         fire_end_hr   (i,j) = smoke2d_RRFS(i,3)
-         hwp_day_avg   (i,j) = smoke2d_RRFS(i,4)
-         ebb_smoke_in  (i  ) = ebu_in(i,j)
+         !ebu_in        (i,j) = smoke2d_RRFS(i,1)!/86400.
+         !frp_in        (i,j) = smoke2d_RRFS(i,2)*conv_frp
+         !fire_end_hr   (i,j) = smoke2d_RRFS(i,3)
+         !hwp_day_avg   (i,j) = smoke2d_RRFS(i,4)
+         !ebb_smoke_in  (i  ) = ebu_in(i,j)
+         !JR st: adding smokedc6_RRFS
+         if (hour_int .le. 24) then
+           hour_tmp = hour_int
+         elseif (hour_int .le. 48) then
+           hour_tmp = hour_int - 24
+         elseif (hour_int .le. 72) then
+           hour_tmp = hour_int - 48
+         else
+           hour_tmp = hour_int - 72
+         end if
+         if (hwp_alpha == 0.0) then
+           ebu_in        (i,j) = smokedc6_RRFS(i,5,1) !avg 24 hrs
+           frp_in        (i,j) = smokedc6_RRFS(i,5,2)*conv_frp !avg 24 hrs
+         else       
+           ebu_in        (i,j) = smokedc6_RRFS(i,floor(hour_tmp / 6.0) + 1,1)!
+           frp_in        (i,j) = smokedc6_RRFS(i,floor(hour_tmp / 6.0) + 1,2)*conv_frp
+         endif
+         hwp_prevd_6hrs (i,j) = smokdc6_RRFS(i,floor(hour_tmp / 6.0) + 1,4)
+         cloud_fraction(i,j) = smokedc6_RRFS(i,floor(hour_tmp / 6.0) + 1,6) !SRB: Reading cloud fraction from the input file
+         ebb_smoke_in   (i  ) = ebu_in(i,j)
+         !JR ends 
        enddo
       enddo
     end if
