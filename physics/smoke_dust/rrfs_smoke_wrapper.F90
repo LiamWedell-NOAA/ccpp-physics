@@ -495,7 +495,7 @@ contains
                        chem,julday,gmt,xlat,xlong,                   &
                        fire_end_hr, peak_hr,curr_secs,               &
                        coef_bb_dc,fire_hist,hwp_local,hwp_day_avg,   &
-                       hwp_prevd_6hrs,swdown,ebb_dcycle,ebu_in,      &
+                       swdown,ebb_dcycle,ebu_in,      &
                        ebu,fire_type,moist(:,:,:,p_qv),              &
                        add_fire_moist_flux,plume_beta_qv,hwp_alpha,  &    
                        ids,ide, jds,jde, kds,kde,                    &
