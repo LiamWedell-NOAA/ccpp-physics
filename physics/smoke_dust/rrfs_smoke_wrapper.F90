@@ -1105,7 +1105,7 @@ contains
            ebu_in        (i,j) = smokedc6_RRFS(i,floor(hour_tmp / 6.0) + 1,1)!
            frp_in        (i,j) = smokedc6_RRFS(i,floor(hour_tmp / 6.0) + 1,2)*conv_frp
          endif
-         hwp_prevd_6hrs (i,j) = smokdc6_RRFS(i,floor(hour_tmp / 6.0) + 1,4)
+         hwp_prevd_6hrs (i,j) = smokedc6_RRFS(i,floor(hour_tmp / 6.0) + 1,4)
          cloud_fraction(i,j) = smokedc6_RRFS(i,floor(hour_tmp / 6.0) + 1,6) !SRB: Reading cloud fraction from the input file
          ebb_smoke_in   (i  ) = ebu_in(i,j)
          !JR ends 
