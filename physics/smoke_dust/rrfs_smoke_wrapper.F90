@@ -156,7 +156,7 @@ contains
     real(kind_phys), dimension(:,:,:), intent(in)    :: smoke_RRFS
     real(kind_phys), dimension(:,:),   intent(in)    :: smoke2d_RRFS
     !JR st: added method 6
-    real(kind_phys), dimension(:,:,:),   intent(in)    :: smokem6_RRFS
+    real(kind_phys), dimension(:,:,:),   intent(in)    :: smokedc6_RRFS
     !JR ends
     real(kind_phys), dimension(:,:),   intent(in)    :: emi_ant_in
     real(kind_phys), dimension(:),     intent(in)    :: u10m, v10m, ustar, dswsfc,         &
@@ -1008,11 +1008,11 @@ contains
        do j=jts, jte
          !totprcp_24hrs (i,j) = smoke2d_RRFS(i,5)
          !JR st: adding smokedc6_RRFS
-         fire_end_hr   (i,j) = smokem6_RRFS(i,5,3) !This is same for all 4 time intervals
-         hwp_day_avg   (i,j) = smokem6_RRFS(i,5,4) !24 hr avg
-         totprcp_24hrs (i,j) = smokem6_RRFS(i,5,5) !This is same for all 4 time intervals
-         ebu_daily_avg (i,j) = smokem6_RRFS(i,5,1) !24 hr avg
-         frp_daily_avg (i,j) = smokem6_RRFS(i,5,2)*conv_frp
+         fire_end_hr   (i,j) = smokedc6_RRFS(i,5,3) !This is same for all 4 time intervals
+         hwp_day_avg   (i,j) = smokedc6_RRFS(i,5,4) !24 hr avg
+         totprcp_24hrs (i,j) = smokedc6_RRFS(i,5,5) !This is same for all 4 time intervals
+         ebu_daily_avg (i,j) = smokedc6_RRFS(i,5,1) !24 hr avg
+         frp_daily_avg (i,j) = smokedc6_RRFS(i,5,2)*conv_frp
          !JR ends
        enddo
       enddo
