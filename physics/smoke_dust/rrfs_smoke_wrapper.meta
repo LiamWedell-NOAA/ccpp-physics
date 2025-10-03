@@ -646,7 +646,7 @@
   type = real
   kind = kind_phys
   intent = in
-smokedc6_RRFS]
+[smokedc6_RRFS]
   standard_name = emission_smoke_6hrly
   long_name = emission fire RRFS 6hr
   units = various
