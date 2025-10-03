@@ -217,6 +217,7 @@ contains
     real(kind_phys), dimension(ims:im, jms:jme )  :: coef_bb_dc, flam_frac, frp_in,           &
                                           fire_hist, peak_hr, lu_nofire, lu_qfire, lu_sfire,  &
                                                      ebu_in, fire_end_hr, hwp_day_avg,        &
+                                                     ebu_daily_avg, frp_daily_avg,  hwp_prevd_6hrs, &
                                                      uspdavg2d, hpbl2d, totprcp_24hrs, eco_id
     integer,         dimension(ims:im, jms:jme )  :: min_fplume2, max_fplume2, fire_type,  &
                                                      kpbl,kpbl_thetav
@@ -339,7 +340,8 @@ contains
         ntrac,gq0,totprcp,                                              &
         num_chem,num_moist,                                             &
         ntsmoke, ntdust,ntcoarsepm,                                     &
-        moist,chem,ebu_in,kpbl_thetav,ebb_smoke_in,                     &
+        moist,chem,ebu_in,ebu_daily_avg,frp_daily_avg, hwp_prevd_6hrs,  &
+        kpbl_thetav,ebb_smoke_in,                                       &
         fire_hist,frp_in, hwp_day_avg, totprcp_24hrs, fire_end_hr,      &
         eco_id, eco_id_in,eco_in,                                       &    !JR ECO map
         emis_anoc,smois,stemp,ivgtyp,isltyp,vegfrac,rmol,swdown,znt,    &
@@ -684,7 +686,8 @@ contains
         ntrac,gq0,totprcp,                                                 &
         num_chem, num_moist,                                               &
         ntsmoke, ntdust, ntcoarsepm,                                       &
-        moist,chem,ebu_in,kpbl_thetav,ebb_smoke_in,                        &
+        moist,chem,ebu_in,ebu_daily_avg,frp_daily_avg, hwp_prevd_6hrs, &
+        kpbl_thetav,ebb_smoke_in,                        &
         fire_hist,frp_in, hwp_day_avg, totprcp_24hrs, fire_end_hr,         &
         eco_id,eco_id_in,eco_in,                                           &  !JR ECO map
         emis_anoc,smois,stemp,ivgtyp,isltyp,vegfrac,rmol,swdown,           &
@@ -730,7 +733,8 @@ contains
                            its,ite, jts,jte, kts,kte
 
 
-    real(kind_phys), dimension(ims:ime, jms:jme),intent(out) :: ebu_in
+    real(kind_phys), dimension(ims:ime, jms:jme),intent(out) :: ebu_in,ebu_daily_avg, &
+                                                                frp_daily_avg
     
     integer,dimension(ims:ime, jms:jme), intent(out) :: isltyp, ivgtyp
     real(kind_phys), dimension(ims:ime, kms:kme, jms:jme), intent(out) ::              & 
@@ -747,7 +751,7 @@ contains
     real(kind_phys), dimension(ims:ime, kms:kme, jms:jme), intent(out) :: z_at_w
     real(kind_phys), dimension(ims:ime, nsoil, jms:jme), intent(out) :: smois,stemp
     real(kind_phys), dimension(ims:ime,jms:jme), intent(inout) :: frp_in, fire_end_hr, fire_hist, coef_bb_dc
-    real(kind_phys), dimension(ims:ime,jms:jme), intent(inout) :: hwp_day_avg, totprcp_24hrs, peak_hr
+    real(kind_phys), dimension(ims:ime,jms:jme), intent(inout) :: hwp_day_avg, hwp_prevd_6hrs,totprcp_24hrs, peak_hr
     real(kind_phys), dimension(ims:ime), intent(inout) :: emis_anoc,ebb_smoke_in
     real(kind_phys), parameter :: conv_frp = 1.e+06_kind_phys  ! FRP conversion factor, MW to W
     real(kind_phys), parameter :: frpc  = 1._kind_phys         ! FRP conversion factor (Regional)
@@ -773,6 +777,9 @@ contains
     emis_anoc      = 0._kind_phys
     frp_in         = 0._kind_phys
     hwp_day_avg    = 0._kind_phys
+    hwp_prevd_6hrs = 0._kind_phys
+    frp_daily_avg  = 0._kind_phys
+    ebu_daily_avg  = 0._kind_phys
     totprcp_24hrs  = 0._kind_phys
     fire_end_hr    = 0._kind_phys
     uspdavg2d      = 0._kind_phys
