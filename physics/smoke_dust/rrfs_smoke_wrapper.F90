@@ -12,7 +12,7 @@
                                      ebb_dcycle, extended_sd_diags,add_fire_heat_flux,  &
                                      num_moist, num_chem, num_emis_seas, num_emis_dust, &
                                      p_qv, p_atm_shum, p_atm_cldq,plume_wind_eff,       &
-                                     plume_burntarea_delta,                             &
+                                     use_rave_cloud_frac, plume_burntarea_delta,        &
                                      p_smoke, p_dust_1, p_coarse_pm, epsilc,            &
                                      n_dbg_lines, add_fire_moist_flux, plume_alpha,     &
                                      plume_beta, plume_beta_qv, hwp_alpha, plume_sfc_opt 
@@ -46,7 +46,7 @@ contains
                               drydep_opt_in, pm_settling_in,                      & ! dry dep namelist
                               wetdep_ls_opt_in,wetdep_ls_alpha_in,                & ! wet dep namelist
                               rrfs_sd, do_plumerise_in, plumerisefire_frq_in,     & ! smoke namelist 
-                              plume_burntarea_delta_in,                           & ! smoke namelist
+                              use_rave_cloud_frac_in,plume_burntarea_delta_in,    & ! smoke namelist
                               plume_wind_eff_in,add_fire_heat_flux_in,            & ! smoke namelist
                               addsmoke_flag_in, ebb_dcycle_in, hwp_method_in,     & ! smoke namelist
                               add_fire_moist_flux_in, plume_sfc_opt_in,           & ! smoke namelist
@@ -67,7 +67,7 @@ contains
   integer,         intent(in) :: dust_opt_in,dust_moist_opt_in, wetdep_ls_opt_in, pm_settling_in, seas_opt_in
   integer,         intent(in) :: drydep_opt_in
   logical,         intent(in) :: aero_ind_fdb_in,dbg_opt_in, extended_sd_diags_in, add_fire_heat_flux_in, add_fire_moist_flux_in
-  integer,         intent(in) :: hwp_method_in, plume_wind_eff_in, plumerisefire_frq_in, n_dbg_lines_in
+  integer,         intent(in) :: hwp_method_in, use_rave_cloud_frac_in, plume_wind_eff_in, plumerisefire_frq_in, n_dbg_lines_in
   integer,         intent(in) :: addsmoke_flag_in, ebb_dcycle_in, plume_sfc_opt_in
   logical,         intent(in) :: do_plumerise_in, rrfs_sd
   character(len=*),intent(out):: errmsg
@@ -99,6 +99,7 @@ contains
      plumerisefire_frq     = plumerisefire_frq_in
      addsmoke_flag         = addsmoke_flag_in
      hwp_method            = hwp_method_in
+     use_rave_cloud_frac   = use_rave_cloud_frac_in
      plume_burntarea_delta = plume_burntarea_delta_in
      plume_wind_eff        = plume_wind_eff_in
      add_fire_heat_flux    = add_fire_heat_flux_in
@@ -341,8 +342,8 @@ contains
         ntrac,gq0,totprcp,                                              &
         num_chem,num_moist,                                             &
         ntsmoke, ntdust,ntcoarsepm,                                     &
-        moist,chem,ebu_in,ebu_daily_avg,frp_daily_avg, &
-        cloud_fraction,hwp_prevd_6hrs,  &
+        moist,chem,ebu_in,ebu_daily_avg,frp_daily_avg,                  &
+        cloud_fraction,hwp_prevd_6hrs,                                  &
         kpbl_thetav,ebb_smoke_in,                                       &
         fire_hist,frp_in, hwp_day_avg, totprcp_24hrs, fire_end_hr,      &
         eco_id, eco_id_in,eco_in,                                       &    !JR ECO map
@@ -378,6 +379,11 @@ contains
     do j=jts,jte
       do i=its,ite
         if (ebu_in(i,j)<ebb_min) then
+           !JR starts, phase2
+           fire_type(i,j) = 0
+           lu_nofire(i,j) = 1.0
+        elseif (use_rave_cloud_frac .AND. cloud_fraction(i,j) .le. 10 .AND. frp_in(i,j) .le. 10) then
+           !SRB: Adding cloud fraction condition
            fire_type(i,j) = 0
            lu_nofire(i,j) = 1.0
         else
@@ -1091,30 +1097,33 @@ contains
          !ebb_smoke_in  (i  ) = ebu_in(i,j)
          !RRFSv1.0 ends
          !JR st: adding smokedc6_RRFS
+         !Determine hour_tmp (reset every 24h chunk)
+         select case (hour_int)
+           case (0:24)
+              hour_tmp = hour_int
+           case (25:48)
+              hour_tmp = hour_int - 24
+           case (49:72)
+              hour_tmp = hour_int - 48
+           case default
+              hour_tmp = hour_int - 72
+         end select
+         !Always use 6-hourly slices for these two variables
+         hwp_prevd_6hrs(i,j) = smokedc6_RRFS(i,floor(hour_tmp / 6.0) + 1,4) 
+         cloud_fraction(i,j) = smokedc6_RRFS(i,floor(hour_tmp / 6.0) + 1,6) !SRB: Reading cloud fraction from the input file
+
+         !Select time average based on alpha     
          if (hwp_alpha == 0.0) then
-           !Always use the 5th time slice (24h average)
+           !Always use the 5th time slice (24h average)      
            ebu_in        (i,j) = smokedc6_RRFS(i,5,1) 
            frp_in        (i,j) = smokedc6_RRFS(i,5,2)*conv_frp
-           hwp_prevd_6hrs(i,j) = smokedc6_RRFS(i,5,4)
-           cloud_fraction(i,j) = smokedc6_RRFS(i,5,6)
          else
-           !time slice based on simulation hour
-           if (hour_int <= 24) then
-             hour_tmp = hour_int
-           elseif (hour_int <= 48) then
-             hour_tmp = hour_int - 24
-           elseif (hour_int <= 72) then
-             hour_tmp = hour_int - 48
-           else
-             hour_tmp = hour_int - 72
-           end if       
+           ! Use the 6-hourly varying slices      
            ebu_in        (i,j) = smokedc6_RRFS(i,floor(hour_tmp / 6.0) + 1,1)!
            frp_in        (i,j) = smokedc6_RRFS(i,floor(hour_tmp / 6.0) + 1,2)*conv_frp
-           hwp_prevd_6hrs (i,j) = smokedc6_RRFS(i,floor(hour_tmp / 6.0) + 1,4)
-           cloud_fraction(i,j) = smokedc6_RRFS(i,floor(hour_tmp / 6.0) + 1,6) !SRB: Reading cloud fraction from the input file
          endif 
-         ebb_smoke_in(i) = ebu_in(i,j) 
-         !JR ends 
+         ebb_smoke_in(i) = ebu_in(i,j)
+        !JR ends 
        enddo
       enddo
     end if

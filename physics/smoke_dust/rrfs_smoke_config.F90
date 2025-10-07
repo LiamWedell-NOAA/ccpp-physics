@@ -39,6 +39,7 @@ module rrfs_smoke_config
   logical :: add_fire_heat_flux= .false.
   logical :: add_fire_moist_flux= .false.
   logical :: do_rrfs_sd = .true.
+  integer :: use_rave_cloud_frac = 0
   integer :: plume_wind_eff = 1
   logical :: extended_sd_diags = .false.
   real(kind_phys) :: wetdep_ls_alpha = .5 ! scavenging factor
