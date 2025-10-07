@@ -9,7 +9,7 @@ CONTAINS
   subroutine add_emis_burn(dtstep,dz8w,rho_phy,pi,ebb_min,          &
                            chem,julday,gmt,xlat,xlong,              &
                            fire_end_hr, peak_hr,time_int,           &
-                           coef_bb_dc, fire_hist, hwp, hwp_prevd,   &
+                           coef_bb_dc, fire_hist, hwp, hwp_daily_avg,   &
                            swdown,ebb_dcycle, ebu_in, ebu,fire_type,&
                            q_vap, add_fire_moist_flux,              &
                            plume_beta_qv, hwp_alpha,                &
@@ -34,7 +34,7 @@ CONTAINS
    real(kind_phys), DIMENSION(ims:ime,jms:jme), INTENT(IN)     :: xlat,xlong, swdown
    real(kind_phys), DIMENSION(ims:ime,jms:jme), INTENT(IN)     :: hwp, peak_hr, fire_end_hr, ebu_in !RAR: Shall we make fire_end integer?
    real(kind_phys), DIMENSION(ims:ime,jms:jme), INTENT(INOUT)  :: coef_bb_dc    ! RAR:
-   real(kind_phys), DIMENSION(ims:ime,jms:jme), INTENT(IN)     :: hwp_prevd
+   real(kind_phys), DIMENSION(ims:ime,jms:jme), INTENT(IN)     :: hwp_daily_avg
    real(kind_phys), DIMENSION(ims:ime,kms:kme,jms:jme), INTENT(IN) :: dz8w,rho_phy  !,rel_hum
    real(kind_phys), INTENT(IN) ::  dtstep, gmt
    real(kind_phys), INTENT(IN) ::  time_int, pi, ebb_min       ! RAR: time in seconds since start of simulation
@@ -112,7 +112,7 @@ CONTAINS
              ENDIF
    
              ! this is based on hwp, hourly or instantenous TBD
-             dc_hwp= hwp(i,j)/ MAX(10._kind_phys,hwp_prevd(i,j))
+             dc_hwp= (1._kind_phys-hwp_alpha) * (hwp(i,j)/MAX(10._kind_phys,hwp_daily_avg(i,j))) !hwp(i,j)/ MAX(10._kind_phys,hwp_prevd(i,j))
              dc_hwp= MAX(0._kind_phys,dc_hwp)
              dc_hwp= MIN(20._kind_phys,dc_hwp)
    
@@ -124,7 +124,8 @@ CONTAINS
              !dc_gp = MAX(0._kind_phys,dc_gp)
    
              !dc_fn = MIN(dc_hwp/dc_gp,3._kind_phys)
-             coef_bb_dc(i,j) = hwp_alpha * fire_hist(i,j)* dc_hwp     ! RAR: scaling factor is applied to the forest fires only, except the eastern US
+             !coef_bb_dc(i,j) = hwp_alpha * fire_hist(i,j)* dc_hwp     ! RAR: scaling factor is applied to the forest fires only, except the eastern US
+             coef_bb_dc(i,j) = fire_hist(i,j)* dc_hwp
 
              IF ( dbg_opt .AND. time_int<5000.) then
                WRITE(6,*) 'i,j,fire_hist(i,j),peak_hr(i,j) ', i,j,fire_hist(i,j),peak_hr(i,j)

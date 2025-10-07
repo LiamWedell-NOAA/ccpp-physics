@@ -1083,31 +1083,37 @@ contains
     if (ebb_dcycle == 2) then
       do i=its, ite
        do j=jts, jte 
+         !RRFSv1.0 starts
          !ebu_in        (i,j) = smoke2d_RRFS(i,1)!/86400.
          !frp_in        (i,j) = smoke2d_RRFS(i,2)*conv_frp
          !fire_end_hr   (i,j) = smoke2d_RRFS(i,3)
          !hwp_day_avg   (i,j) = smoke2d_RRFS(i,4)
          !ebb_smoke_in  (i  ) = ebu_in(i,j)
+         !RRFSv1.0 ends
          !JR st: adding smokedc6_RRFS
-         if (hour_int .le. 24) then
-           hour_tmp = hour_int
-         elseif (hour_int .le. 48) then
-           hour_tmp = hour_int - 24
-         elseif (hour_int .le. 72) then
-           hour_tmp = hour_int - 48
-         else
-           hour_tmp = hour_int - 72
-         end if
          if (hwp_alpha == 0.0) then
-           ebu_in        (i,j) = smokedc6_RRFS(i,5,1) !avg 24 hrs
-           frp_in        (i,j) = smokedc6_RRFS(i,5,2)*conv_frp !avg 24 hrs
-         else       
+           !Always use the 5th time slice (24h average)
+           ebu_in        (i,j) = smokedc6_RRFS(i,5,1) 
+           frp_in        (i,j) = smokedc6_RRFS(i,5,2)*conv_frp
+           hwp_prevd_6hrs(i,j) = smokedc6_RRFS(i,5,4)
+           cloud_fraction(i,j) = smokedc6_RRFS(i,5,6)
+         else
+           !time slice based on simulation hour
+           if (hour_int <= 24) then
+             hour_tmp = hour_int
+           elseif (hour_int <= 48) then
+             hour_tmp = hour_int - 24
+           elseif (hour_int <= 72) then
+             hour_tmp = hour_int - 48
+           else
+             hour_tmp = hour_int - 72
+           end if       
            ebu_in        (i,j) = smokedc6_RRFS(i,floor(hour_tmp / 6.0) + 1,1)!
            frp_in        (i,j) = smokedc6_RRFS(i,floor(hour_tmp / 6.0) + 1,2)*conv_frp
-         endif
-         hwp_prevd_6hrs (i,j) = smokedc6_RRFS(i,floor(hour_tmp / 6.0) + 1,4)
-         cloud_fraction(i,j) = smokedc6_RRFS(i,floor(hour_tmp / 6.0) + 1,6) !SRB: Reading cloud fraction from the input file
-         ebb_smoke_in   (i  ) = ebu_in(i,j)
+           hwp_prevd_6hrs (i,j) = smokedc6_RRFS(i,floor(hour_tmp / 6.0) + 1,4)
+           cloud_fraction(i,j) = smokedc6_RRFS(i,floor(hour_tmp / 6.0) + 1,6) !SRB: Reading cloud fraction from the input file
+         endif 
+         ebb_smoke_in(i) = ebu_in(i,j) 
          !JR ends 
        enddo
       enddo
